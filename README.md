@@ -6,6 +6,8 @@
 
 This is a **local-dev release**. It is not a hosted service, not a fork of Hermes Agent, not a generic remote dev container, and not a replacement for DevSpace.
 
+For the full Operator Mode guide, new-user quickstart, and tunnel safety model, see `docs/operator-mode.md`.
+
 ## Security posture
 
 By default, `hermes-gpt` is designed for a trusted local machine:
@@ -44,7 +46,7 @@ Example client command:
 ```json
 {
   "command": "python",
-  "args": ["C:\\Users\\asimo\\hermes-gpt\\server.py"]
+  "args": ["C:\\Users\\<YOU>\\hermes-gpt\\server.py"]
 }
 ```
 
@@ -72,7 +74,7 @@ ChatGPT developer mode expects a remote MCP endpoint. Do not enter a localhost U
 For short local testing only:
 
 ```powershell
-cd C:\Users\asimo\hermes-gpt
+cd C:\Users\<YOU>\hermes-gpt
 python server.py --http --host 127.0.0.1 --port 4750
 ```
 
@@ -88,7 +90,9 @@ In ChatGPT, configure:
 - MCP server URL: `https://<your-trycloudflare-host>/mcp`
 - Authentication: No Authentication
 
-This is not a production deployment. Remove and recreate the connector if ChatGPT cached older tool metadata.
+If ChatGPT only shows the old 5-tool surface, reconnect or recreate the connector and follow the workflow in `docs/operator-mode.md`.
+
+Example scripts for local setup live under `examples/`.
 
 ## Tool gates
 
@@ -220,7 +224,7 @@ Workspace direct with allowed path:
 $env:HERMES_GPT_OPERATOR_ENABLED="1"
 $env:HERMES_GPT_OPERATOR_LEVEL="workspace"
 $env:HERMES_GPT_OPERATOR_APPLY_MODE="direct"
-$env:HERMES_GPT_OPERATOR_ALLOWED_PATHS="C:\Users\asimo\hermes-gpt,C:\Users\asimo\AppData\Local\hermes\hermes-agent"
+$env:HERMES_GPT_OPERATOR_ALLOWED_PATHS="C:\Users\<YOU>\hermes-gpt,C:\Users\<YOU>\AppData\Local\hermes\hermes-agent"
 hermes-gpt
 ```
 
@@ -290,7 +294,7 @@ Before publishing:
 
 The feasibility probe passed in this environment:
 
-- Hermes source root: `C:\Users\asimo\AppData\Local\hermes\hermes-agent`
+- Hermes source root: `C:\Users\<YOU>\AppData\Local\hermes\hermes-agent`
 - File tools: available
 - Terminal tool: available, gated by `HERMES_GPT_ENABLE_TERMINAL=1`
 - Memory tool: available

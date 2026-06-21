@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.0 - 2026-06-21
+
+- Added tiered Operator / Owner Mode tooling for trusted MCP clients.
+- Kept the default posture read-only or dry-run, with direct mutation gated by explicit server and per-call opt-in.
+- Added operator policy, status, audit, cron, config, env, gateway, workspace, and owner-scope tools.
+- Fixed data-root normalization so operator profile operations resolve back to the Hermes data root.
+- Updated packaging to include operator modules and release docs.
+- Added a new Operator Mode guide, quickstart, and troubleshooting for new users.
+
 ## 0.1.0 - 2026-06-18
 
 - Initial local-dev release.

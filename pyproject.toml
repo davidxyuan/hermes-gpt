@@ -26,6 +26,7 @@ dev = [
 hermes-gpt = "server:main"
 
 [tool.setuptools]
+include-package-data = true
 py-modules = [
   "server",
   "operator_policy",
@@ -33,6 +34,22 @@ py-modules = [
   "operator_skills",
   "operator_config",
   "operator_workspace",
+]
+
+[tool.setuptools.data-files]
+"share/hermes-gpt" = [
+  "README.md",
+  "pyproject.toml",
+  "CHANGELOG.md",
+]
+"share/hermes-gpt/docs" = [
+  "docs/operator-mode.md",
+  "docs/release-notes-v0.2.0.md",
+]
+"share/hermes-gpt/examples" = [
+  "examples/start-hermes-gpt.example.ps1",
+  "examples/status-hermes-gpt.example.ps1",
+  "examples/install-task.example.ps1",
 ]
 
 [tool.pytest.ini_options]
