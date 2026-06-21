@@ -26,7 +26,14 @@ dev = [
 hermes-gpt = "server:main"
 
 [tool.setuptools]
-py-modules = ["server"]
+py-modules = [
+  "server",
+  "operator_policy",
+  "operator_cron",
+  "operator_skills",
+  "operator_config",
+  "operator_workspace",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["."]
