@@ -60,6 +60,30 @@ def test_old_env_enabled_helper_still_works():
 
 
 # ---------------------------------------------------------------------------
+# Subprocess helper
+# ---------------------------------------------------------------------------
+
+
+def test_run_argv_decodes_subprocess_bytes_without_text_mode(monkeypatch):
+    import subprocess
+
+    captured = {}
+
+    def fake_run(argv, **kwargs):
+        captured.update(kwargs)
+        return subprocess.CompletedProcess(argv, 0, b"prefix\xffsuffix", b"err\xfe")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+
+    rc, out, err = op.run_argv(["fake-tool"])
+
+    assert rc == 0
+    assert "text" not in captured
+    assert "prefix" in out
+    assert "err" in err
+
+
+# ---------------------------------------------------------------------------
 # Policy defaults
 # ---------------------------------------------------------------------------
 

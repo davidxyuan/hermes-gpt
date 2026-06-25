@@ -790,18 +790,54 @@ def run_argv(
             cwd=workdir,
             env=env,
             capture_output=True,
-            text=True,
             timeout=capped_timeout,
             shell=False,  # hard rule: never shell=True
         )
     except subprocess.TimeoutExpired as exc:
-        out = (exc.stdout or "") if isinstance(exc.stdout, str) else ""
-        err = (exc.stderr or "") if isinstance(exc.stderr, str) else ""
+        out = _decode_subprocess_output(exc.stdout)
+        err = _decode_subprocess_output(exc.stderr)
         return (124, _truncate(out), _truncate(err or f"timed out after {capped_timeout}s"))
     except FileNotFoundError as exc:
         return (127, "", _truncate(str(exc)))
 
-    return (proc.returncode, _truncate(proc.stdout), _truncate(proc.stderr))
+    return (
+        proc.returncode,
+        _truncate(_decode_subprocess_output(proc.stdout)),
+        _truncate(_decode_subprocess_output(proc.stderr)),
+    )
+
+
+def _decode_subprocess_output(data: bytes | str | None) -> str:
+    if data is None:
+        return ""
+    if isinstance(data, str):
+        return data
+    if not data:
+        return ""
+
+    import locale
+
+    encodings = [
+        "utf-8",
+        locale.getpreferredencoding(False),
+        "mbcs",
+        "cp950",
+        "cp936",
+        "cp437",
+    ]
+    seen: set[str] = set()
+    for encoding in encodings:
+        if not encoding:
+            continue
+        key = encoding.lower()
+        if key in seen:
+            continue
+        seen.add(key)
+        try:
+            return data.decode(encoding)
+        except (LookupError, UnicodeDecodeError):
+            continue
+    return data.decode("utf-8", errors="replace")
 
 
 def _truncate(text: str, limit: int = 4096) -> str:
