@@ -517,7 +517,7 @@ def hermes_session_search(query: str, limit: int = 20, offset: int = 0) -> str:
 # ---------------------------------------------------------------------------
 
 
-def hermes_vision_analyze(image_url: str, question: str = "") -> str:
+async def hermes_vision_analyze(image_url: str, question: str = "") -> str:
     """Analyze an image using Hermes Agent vision. Env-gated."""
     try:
         require_imports()
@@ -529,15 +529,11 @@ def hermes_vision_analyze(image_url: str, question: str = "") -> str:
             raise RuntimeError(
                 "Vision tool is not available (import failed at startup)."
             )
-        import asyncio
 
         user_prompt = question if question else "Describe this image in detail."
-        result = asyncio.run(
-            vision_tool.vision_analyze_tool(
-                image_url=image_url, user_prompt=user_prompt
-            )
+        return await vision_tool.vision_analyze_tool(
+            image_url=image_url, user_prompt=user_prompt
         )
-        return result
     except Exception as exc:
         raise clean_error("hermes_vision_analyze", exc) from exc
 
@@ -559,7 +555,7 @@ def hermes_web_search(query: str, limit: int = 5) -> str:
         raise clean_error("hermes_web_search", exc) from exc
 
 
-def hermes_web_extract(
+async def hermes_web_extract(
     urls: List[str],
     char_limit: int | None = None,
 ) -> str:
@@ -574,15 +570,11 @@ def hermes_web_extract(
             raise RuntimeError(
                 "Web tool is not available (import failed at startup)."
             )
-        import asyncio
 
         kwargs = {}
         if char_limit is not None:
             kwargs["char_limit"] = char_limit
-        result = asyncio.run(
-            web_tool.web_extract_tool(urls=urls, **kwargs)
-        )
-        return result
+        return await web_tool.web_extract_tool(urls=urls, **kwargs)
     except Exception as exc:
         raise clean_error("hermes_web_extract", exc) from exc
 
