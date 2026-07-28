@@ -38,6 +38,8 @@ IMPORT_ERROR: str | None = None
 file_tools: Any = None
 terminal_tool: Any = None
 memory_tool: Any = None
+memory_store: Any = None
+memory_store_dir: Path | None = None
 skill_manager_tool: Any = None
 SessionDB: Any = None
 get_hermes_home: Any = None
@@ -55,6 +57,19 @@ def env_enabled(name: str) -> bool:
 
 def is_loopback_host(host: str) -> bool:
     return host in {"127.0.0.1", "localhost", "::1"}
+
+
+def configure_system_ssl_trust() -> bool:
+    if os.name != "nt":
+        return False
+    try:
+        import truststore
+
+        truststore.inject_into_ssl()
+        return True
+    except Exception as exc:
+        eprint(f"hermes-gpt: Windows system SSL trust unavailable: {exc}")
+        return False
 
 
 def is_hermes_root(path: Path) -> bool:
@@ -208,6 +223,35 @@ def require_imports() -> None:
         raise RuntimeError(f"Hermes imports are unavailable: missing {', '.join(missing)}")
 
 
+def get_memory_store() -> Any:
+    global memory_store, memory_store_dir
+    require_imports()
+    if not hasattr(memory_tool, "MemoryStore") or not hasattr(memory_tool, "get_memory_dir"):
+        raise RuntimeError("Hermes memory backend does not expose MemoryStore/get_memory_dir.")
+    current_dir = Path(memory_tool.get_memory_dir()).expanduser().resolve()
+    if memory_store is None or memory_store_dir != current_dir:
+        store = memory_tool.MemoryStore()
+        store.load_from_disk()
+        memory_store = store
+        memory_store_dir = current_dir
+    return memory_store
+
+
+def search_memory_store(store: Any, target: str) -> str:
+    if target not in {"memory", "user"}:
+        raise RuntimeError("Invalid target. Use memory or user.")
+    entries = list(store._entries_for(target))
+    return json.dumps(
+        {
+            "success": True,
+            "target": target,
+            "entries": entries,
+            "usage": f"{store._char_count(target):,}/{store._char_limit(target):,}",
+        },
+        ensure_ascii=False,
+    )
+
+
 def skill_roots() -> list[Path]:
     roots: list[Path] = []
     hermes_home = None
@@ -287,6 +331,7 @@ def clean_error(tool_name: str, exc: Exception) -> RuntimeError:
 
 from mcp.server.fastmcp import FastMCP
 
+configure_system_ssl_trust()
 import_hermes()
 
 
@@ -383,7 +428,16 @@ def hermes_memory(
             raise RuntimeError("Unsupported memory action. Use add, replace, remove, or search.")
         if action in {"add", "replace", "remove"} and not env_enabled(ENABLE_MEMORY_WRITE_ENV):
             raise RuntimeError(f"Memory write actions are disabled. Set {ENABLE_MEMORY_WRITE_ENV}=1 to enable them.")
-        return memory_tool.memory_tool(action=action, target=target, content=content, old_text=old_text)
+        store = get_memory_store()
+        if action == "search":
+            return search_memory_store(store, target)
+        return memory_tool.memory_tool(
+            action=action,
+            target=target,
+            content=content,
+            old_text=old_text,
+            store=store,
+        )
     except Exception as exc:
         raise clean_error("hermes_memory", exc) from exc
 

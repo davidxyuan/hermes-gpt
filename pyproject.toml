@@ -16,6 +16,8 @@ dependencies = [
   "mcp[cli]",
   "packaging>=23",
   "uvicorn",
+  "ddgs>=9.14.4",
+  "truststore>=0.10.4; sys_platform == 'win32'",
   "tomli; python_version < '3.11'",
 ]
 

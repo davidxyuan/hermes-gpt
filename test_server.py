@@ -132,17 +132,36 @@ def test_memory_write_actions_are_disabled_by_default(monkeypatch):
 
 def test_memory_search_remains_available(monkeypatch):
     clear_gate_envs(monkeypatch)
+    store = SimpleNamespace(
+        _entries_for=lambda target: ["remembered fact"],
+        _char_count=lambda target: 15,
+        _char_limit=lambda target: 2200,
+    )
+    monkeypatch.setattr(server, "require_imports", lambda: None)
+    monkeypatch.setattr(server, "get_memory_store", lambda: store)
+
+    result = json.loads(server.hermes_memory(action="search", target="memory"))
+    assert result["success"] is True
+    assert result["entries"] == ["remembered fact"]
+    assert result["usage"] == "15/2,200"
+
+
+def test_memory_write_passes_initialized_store(monkeypatch):
+    clear_gate_envs(monkeypatch)
+    monkeypatch.setenv(server.ENABLE_MEMORY_WRITE_ENV, "1")
     captured = {}
+    store = object()
 
     def fake_memory_tool(**kwargs):
         captured.update(kwargs)
-        return "memory search ok"
+        return "memory write ok"
 
     monkeypatch.setattr(server, "require_imports", lambda: None)
+    monkeypatch.setattr(server, "get_memory_store", lambda: store)
     monkeypatch.setattr(server, "memory_tool", SimpleNamespace(memory_tool=fake_memory_tool))
 
-    assert server.hermes_memory(action="search", target="memory") == "memory search ok"
-    assert captured["action"] == "search"
+    assert server.hermes_memory(action="add", target="memory", content="x") == "memory write ok"
+    assert captured["store"] is store
 
 
 def test_terminal_direct_call_is_disabled_by_default(monkeypatch):
