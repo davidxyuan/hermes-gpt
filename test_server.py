@@ -14,6 +14,20 @@ import pytest
 import server
 
 
+def test_fastmcp_1x_dependency_contract():
+    from importlib.metadata import version
+    from mcp.server.fastmcp import FastMCP
+
+    mcp_major = int(version("mcp").split(".", 1)[0])
+    assert mcp_major == 1
+    assert FastMCP.__name__ == "FastMCP"
+
+    pyproject = Path(__file__).with_name("pyproject.toml").read_text(encoding="utf-8")
+    requirements = Path(__file__).with_name("requirements.txt").read_text(encoding="utf-8")
+    assert '"mcp[cli]>=1.26,<2"' in pyproject
+    assert "mcp[cli]>=1.26,<2" in requirements
+
+
 GATE_ENVS = [
     server.ENABLE_WRITE_ENV,
     server.ENABLE_MEMORY_WRITE_ENV,
