@@ -182,17 +182,36 @@ def test_memory_write_actions_are_disabled_by_default(monkeypatch):
 
 def test_memory_search_remains_available(monkeypatch):
     clear_gate_envs(monkeypatch)
+    store = SimpleNamespace(
+        _entries_for=lambda target: ["remembered fact"],
+        _char_count=lambda target: 15,
+        _char_limit=lambda target: 2200,
+    )
+    monkeypatch.setattr(server, "require_imports", lambda: None)
+    monkeypatch.setattr(server, "get_memory_store", lambda: store)
+
+    result = json.loads(server.hermes_memory(action="search", target="memory"))
+    assert result["success"] is True
+    assert result["entries"] == ["remembered fact"]
+    assert result["usage"] == "15/2,200"
+
+
+def test_memory_write_passes_initialized_store(monkeypatch):
+    clear_gate_envs(monkeypatch)
+    monkeypatch.setenv(server.ENABLE_MEMORY_WRITE_ENV, "1")
     captured = {}
+    store = object()
 
     def fake_memory_tool(**kwargs):
         captured.update(kwargs)
-        return "memory search ok"
+        return "memory write ok"
 
     monkeypatch.setattr(server, "require_imports", lambda: None)
+    monkeypatch.setattr(server, "get_memory_store", lambda: store)
     monkeypatch.setattr(server, "memory_tool", SimpleNamespace(memory_tool=fake_memory_tool))
 
-    assert server.hermes_memory(action="search", target="memory") == "memory search ok"
-    assert captured["action"] == "search"
+    assert server.hermes_memory(action="add", target="memory", content="x") == "memory write ok"
+    assert captured["store"] is store
 
 
 def test_terminal_direct_call_is_disabled_by_default(monkeypatch):
@@ -232,7 +251,7 @@ def test_vision_analyze_is_disabled_by_default(monkeypatch):
     ))
 
     with pytest.raises(RuntimeError, match=server.ENABLE_VISION_ENV):
-        server.hermes_vision_analyze(image_url="https://example.com/img.jpg")
+        asyncio.run(server.hermes_vision_analyze(image_url="https://example.com/img.jpg"))
 
 
 def test_web_search_is_disabled_by_default(monkeypatch):
@@ -254,7 +273,7 @@ def test_web_extract_is_disabled_by_default(monkeypatch):
     ))
 
     with pytest.raises(RuntimeError, match=server.ENABLE_WEB_ENV):
-        server.hermes_web_extract(urls=["https://example.com"])
+        asyncio.run(server.hermes_web_extract(urls=["https://example.com"]))
 
 
 def test_web_search_proxies_to_web_tool_when_enabled(monkeypatch):
@@ -292,7 +311,7 @@ def test_web_extract_proxies_to_web_tool_when_enabled(monkeypatch):
         web_extract_tool=fake_web_extract,
     ))
 
-    result = server.hermes_web_extract(urls=["https://example.com"])
+    result = asyncio.run(server.hermes_web_extract(urls=["https://example.com"]))
     assert result == "extracted content"
     assert captured["urls"] == ["https://example.com"]
 
@@ -312,10 +331,10 @@ def test_vision_analyze_proxies_to_vision_tool_when_enabled(monkeypatch):
         vision_analyze_tool=fake_vision,
     ))
 
-    result = server.hermes_vision_analyze(
+    result = asyncio.run(server.hermes_vision_analyze(
         image_url="https://example.com/cat.jpg",
         question="What is this?",
-    )
+    ))
     assert result == '{"analysis": "a cat"}'
     assert captured["image_url"] == "https://example.com/cat.jpg"
     assert captured["user_prompt"] == "What is this?"
@@ -336,7 +355,7 @@ def test_vision_analyze_defaults_prompt_when_question_empty(monkeypatch):
         vision_analyze_tool=fake_vision,
     ))
 
-    result = server.hermes_vision_analyze(image_url="https://example.com/landscape.jpg")
+    result = asyncio.run(server.hermes_vision_analyze(image_url="https://example.com/landscape.jpg"))
     assert result == '{"analysis": "a landscape"}'
     assert "Describe this image in detail." in captured["user_prompt"]
 
