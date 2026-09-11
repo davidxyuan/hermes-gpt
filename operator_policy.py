@@ -933,6 +933,10 @@ def run_argv(
     }
     if os.name == "posix":
         popen_kwargs["start_new_session"] = True
+    elif os.name == "nt":
+        # Operator/Owner subprocesses run behind an always-on MCP server.  Do not
+        # create an interactive console window for every CLI/PowerShell command.
+        popen_kwargs["creationflags"] = getattr(subprocess, "CREATE_NO_WINDOW", 0)
 
     try:
         proc = subprocess.Popen(argv, **popen_kwargs)
@@ -973,6 +977,7 @@ def run_argv(
                     stderr=subprocess.DEVNULL,
                     timeout=3,
                     check=False,
+                    creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
                 )
             except (OSError, subprocess.SubprocessError):
                 pass

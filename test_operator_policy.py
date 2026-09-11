@@ -512,6 +512,7 @@ def test_run_argv_allows_explicit_higher_timeout_cap(monkeypatch):
 
     def fake_popen(*_args, **kwargs):
         captured["start_new_session"] = kwargs.get("start_new_session")
+        captured["creationflags"] = kwargs.get("creationflags")
         return FakeProcess()
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
@@ -524,6 +525,8 @@ def test_run_argv_allows_explicit_higher_timeout_cap(monkeypatch):
     assert captured["timeout"] == 1800
     if os.name == "posix":
         assert captured["start_new_session"] is True
+    elif os.name == "nt":
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
 
 
 def test_run_argv_refuses_empty_argv():
