@@ -958,29 +958,61 @@ def run_argv(
                 os.killpg(proc.pid, signal.SIGKILL)
             except (ProcessLookupError, OSError):
                 pass
-        else:
+            return
+
+        if os.name == "nt":
+            # Killing only the immediate Windows process can leave descendants
+            # holding inherited stdout/stderr pipe handles.  That can make the
+            # follow-up communicate() wait indefinitely even though the parent
+            # reached its timeout.  taskkill /T terminates the full descendant
+            # tree; keep this cleanup itself bounded as well.
             try:
-                proc.kill()
-            except OSError:
+                subprocess.run(
+                    ["taskkill", "/PID", str(proc.pid), "/T", "/F"],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    timeout=3,
+                    check=False,
+                )
+            except (OSError, subprocess.SubprocessError):
                 pass
+
+        try:
+            proc.kill()
+        except OSError:
+            pass
 
     try:
         out, err = proc.communicate(timeout=capped_timeout)
     except subprocess.TimeoutExpired as exc:
         terminate_process_group()
+        out = exc.stdout if isinstance(exc.stdout, str) else ""
+        err = exc.stderr if isinstance(exc.stderr, str) else ""
         try:
-            out, err = proc.communicate(timeout=1)
-        except subprocess.TimeoutExpired:
+            collected_out, collected_err = proc.communicate(timeout=1)
+            if collected_out:
+                out = collected_out
+            if collected_err:
+                err = collected_err
+        except subprocess.TimeoutExpired as final_exc:
+            # Never do an unbounded communicate() after a timeout.  A surviving
+            # descendant may still own an inherited pipe handle.  Make one last
+            # best-effort kill, preserve any partial output, close our read ends,
+            # and return rc=124 promptly.
             try:
                 proc.kill()
             except OSError:
                 pass
-            out, err = proc.communicate()
-
-        if not out and isinstance(exc.stdout, str):
-            out = exc.stdout
-        if not err and isinstance(exc.stderr, str):
-            err = exc.stderr
+            if not out and isinstance(final_exc.stdout, str):
+                out = final_exc.stdout
+            if not err and isinstance(final_exc.stderr, str):
+                err = final_exc.stderr
+            for stream in (proc.stdout, proc.stderr):
+                try:
+                    if stream is not None:
+                        stream.close()
+                except OSError:
+                    pass
 
         return (
             124,

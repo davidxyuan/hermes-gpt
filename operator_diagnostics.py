@@ -115,21 +115,8 @@ def _check_result(
 
 
 def _is_process_alive(pid: int | None) -> bool:
-    """Best-effort check whether ``pid`` is alive. Never raises."""
-    if pid is None:
-        return False
-    try:
-        import psutil  # type: ignore
-
-        return psutil.pid_exists(pid)
-    except Exception:
-        try:
-            os.kill(pid, 0)
-            return True
-        except (OSError, ProcessLookupError):
-            return False
-        except Exception:
-            return False
+    """Return process liveness using the shared workspace probe."""
+    return op_workspace._is_pid_alive(pid)
 
 
 def _read_config_safe(profile_home: Path) -> dict[str, Any]:
@@ -258,11 +245,26 @@ def _check_gateway_status(profile_home: Path) -> dict[str, Any]:
     heartbeat_path = _ticker_heartbeat_path(profile_home)
 
     pid: int | None = None
+    pid_source: str | None = None
     if pid_path.exists():
         try:
             pid = int(pid_path.read_text(encoding="utf-8").strip())
+            pid_source = "gateway.pid"
         except (OSError, ValueError):
             pid = None
+
+    if pid is None:
+        state_path = _gateway_state_path(profile_home)
+        if state_path.exists():
+            try:
+                with open(state_path, "r", encoding="utf-8") as fh:
+                    state = json.load(fh)
+                state_pid = state.get("pid")
+                if state_pid is not None:
+                    pid = int(state_pid)
+                    pid_source = "gateway_state.json"
+            except (OSError, ValueError, TypeError, json.JSONDecodeError):
+                pid = None
 
     running = _is_process_alive(pid) if pid is not None else False
 
@@ -317,7 +319,7 @@ def _check_gateway_status(profile_home: Path) -> dict[str, Any]:
             extra={"heartbeat_mtime": heartbeat_mtime, "stale_seconds": _STALE_HEARTBEAT_SECONDS},
         )
 
-    extra = {"pid": pid, "running": running}
+    extra = {"pid": pid, "pid_source": pid_source, "running": running}
     if heartbeat_mtime is not None:
         extra["heartbeat_mtime"] = heartbeat_mtime
     extra.update(_gateway_state_summary(profile_home))

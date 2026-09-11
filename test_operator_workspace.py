@@ -282,6 +282,19 @@ def test_gateway_status_no_pid_file(tmp_path, clean_env, audit_override):
     assert parsed["gateway_pid"] is None
 
 
+def test_is_pid_alive_detects_separate_process_without_psutil_dependency():
+    import subprocess
+
+    child = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"])
+    try:
+        assert ows._is_pid_alive(child.pid) is True
+    finally:
+        child.terminate()
+        child.wait(timeout=10)
+
+    assert ows._is_pid_alive(child.pid) is False
+
+
 def test_gateway_status_with_state_file(tmp_path, clean_env, audit_override):
     (tmp_path / "gateway_state.json").write_text(
         json.dumps({"telegram": {"connected": True}, "discord": {"connected": False}}),
@@ -390,6 +403,9 @@ def test_owner_run_command_direct_runs(workspace_tree, clean_env, audit_override
 
 
 def test_owner_run_command_defers_exact_self_restart(workspace_tree, clean_env, audit_override, monkeypatch):
+    if os.name == "nt":
+        pytest.skip("systemd deferred self-restart is POSIX-specific")
+
     _enable_owner(monkeypatch)
     captured = {}
 

@@ -156,6 +156,26 @@ def test_doctor_fails_when_heartbeat_exists_without_pid(hermes_root, clean_env, 
     assert check["pid"] is None
 
 
+def test_doctor_uses_gateway_state_pid_fallback(hermes_root, clean_env, audit_override):
+    (hermes_root / "config.yaml").write_text("profile: default\n", encoding="utf-8")
+    (hermes_root / ".env").write_text("PLAIN=value\n", encoding="utf-8")
+    (hermes_root / "gateway_state.json").write_text(
+        json.dumps({"pid": os.getpid(), "gateway_state": "running"}), encoding="utf-8"
+    )
+    (hermes_root / "cron" / "ticker_heartbeat").write_text("ok", encoding="utf-8")
+
+    out = od.hermes_operator_doctor(profile="default", hermes_root=hermes_root)
+    parsed = json.loads(out)
+
+    assert parsed["success"] is True
+    assert parsed["overall_status"] == "WARN"
+    check = parsed["checks"]["gateway_status"]
+    assert check["code"] == "GATEWAY_OK"
+    assert check["pid"] == os.getpid()
+    assert check["pid_source"] == "gateway_state.json"
+    assert check["running"] is True
+
+
 def test_doctor_fails_for_corrupt_cron_jobs(hermes_root, clean_env, audit_override):
     (hermes_root / "cron" / "jobs.json").write_text("not json", encoding="utf-8")
     out = od.hermes_operator_doctor(profile="default", hermes_root=hermes_root)

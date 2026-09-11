@@ -157,12 +157,14 @@ def _read_gateway_pid_from_state(state: dict[str, Any]) -> int | None:
 
 
 def _is_pid_alive(pid: int | None) -> bool:
-    """Best-effort process liveness probe.
+    """Best-effort cross-platform process liveness probe.
 
-    Prefer psutil when available. Fall back to os.kill(pid, 0).
-    Never raises.
+    Prefer psutil when available. On Windows, ``os.kill(pid, 0)`` is not a
+    reliable existence probe, so use the Win32 process API instead. Other
+    platforms retain the POSIX-style ``os.kill(pid, 0)`` fallback. Never
+    raises.
     """
-    if pid is None:
+    if pid is None or pid <= 0:
         return False
 
     try:
@@ -170,7 +172,38 @@ def _is_pid_alive(pid: int | None) -> bool:
 
         return psutil.pid_exists(pid)
     except Exception:
-        pass  # Fall through to os.kill fallback
+        pass
+
+    if os.name == "nt":
+        try:
+            import ctypes
+            from ctypes import wintypes
+
+            process_query_limited_information = 0x1000
+            still_active = 259
+            error_access_denied = 5
+
+            kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+            kernel32.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+            kernel32.OpenProcess.restype = wintypes.HANDLE
+            kernel32.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+            kernel32.GetExitCodeProcess.restype = wintypes.BOOL
+            kernel32.CloseHandle.argtypes = [wintypes.HANDLE]
+            kernel32.CloseHandle.restype = wintypes.BOOL
+
+            handle = kernel32.OpenProcess(process_query_limited_information, False, pid)
+            if not handle:
+                return ctypes.get_last_error() == error_access_denied
+
+            try:
+                exit_code = wintypes.DWORD()
+                if not kernel32.GetExitCodeProcess(handle, ctypes.byref(exit_code)):
+                    return False
+                return exit_code.value == still_active
+            finally:
+                kernel32.CloseHandle(handle)
+        except Exception:
+            return False
 
     try:
         os.kill(pid, 0)

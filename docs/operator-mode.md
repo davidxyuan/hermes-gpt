@@ -450,7 +450,7 @@ Audit records do not intentionally persist raw prompts, `.env` values, vault con
 
 Read-only deep health check across the Operator surface. Checks include gateway state, config/env readability, cron/skills, policy, audit readability, and connector capability.
 
-Gateway state is fail-closed: `hermes_operator_doctor` never reports the gateway as healthy on a heartbeat file alone. A heartbeat with no live gateway PID fails with `GATEWAY_PID_MISSING`; a dead PID fails with `GATEWAY_DEAD_PID`; an unreachable gateway fails with `GATEWAY_UNREACHABLE`. Stale heartbeat files surface as `GATEWAY_STALE_HEARTBEAT` warnings.
+Gateway state is fail-closed: `hermes_operator_doctor` never reports the gateway as healthy on a heartbeat file alone. It resolves the gateway PID from `gateway.pid`, then falls back to `gateway_state.json["pid"]` when needed and verifies that PID is live. A heartbeat with no live gateway PID fails with `GATEWAY_PID_MISSING`; a dead PID fails with `GATEWAY_DEAD_PID`; an unreachable gateway fails with `GATEWAY_UNREACHABLE`. Stale heartbeat files surface as `GATEWAY_STALE_HEARTBEAT` warnings.
 
 Status vocabulary:
 
