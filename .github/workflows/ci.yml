@@ -89,6 +89,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: NousResearch/hermes-agent
+          # Validate the candidate pair; upstream main is evaluated separately before promotion.
+          ref: d923a5eb487a17c0a68801bba9ef0f56c81040a8
           path: hermes-agent-src
           persist-credentials: false
       - uses: actions/setup-python@v5
