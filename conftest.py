@@ -43,6 +43,7 @@ _ISOLATED_ENV_VARS = (
     # data root during tests. Cleared at import time so collection-time module
     # imports resolve against the sandbox, not the real machine.
     "HERMES_PROFILE",
+    *(('HERMES_AGENT_ROOT',) if os.environ.get('HERMES_GPT_REQUIRE_AGENT_LOADER') != '1' else ()),
 )
 
 # Session-scoped hermetic Hermes data root. Lives for the pytest process only.

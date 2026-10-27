@@ -153,7 +153,7 @@ def _spool_lines(root: Path) -> list[dict]:
     path = root / "missions" / "controller_attention_spool.jsonl"
     if not path.is_file():
         return []
-    return [json.loads(x) for x in path.read_text().splitlines() if x.strip()]
+    return [json.loads(x) for x in path.read_text(encoding="utf-8").splitlines() if x.strip()]
 
 
 def _store_fingerprint(root: Path) -> tuple:

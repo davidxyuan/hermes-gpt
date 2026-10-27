@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+- Preserve the Windows fork's hidden Operator subprocesses and bounded timeout
+  cleanup. If descendant pipes remain open after cleanup, return an explicit
+  unverified-cleanup error rather than waiting indefinitely on a pipe reader.
+- Read UTF-8 attention-spool fixtures explicitly in budget-enforcement tests on
+  non-UTF-8 Windows locales.
+- Allow explicit Agent source selection through `HERMES_AGENT_ROOT`, separate
+  from `HERMES_HOME` data/profile storage. Invalid overrides and unavailable
+  required imports prevent startup instead of selecting an older installation.
+
 ## 0.14.0 - 2026-10-03
 
 Acceptance and recovery: declare deliverable checks before dispatch and recover from positively observed artifact failures within existing limits.

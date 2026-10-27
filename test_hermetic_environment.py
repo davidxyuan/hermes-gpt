@@ -50,6 +50,17 @@ def test_hermes_home_is_redirected_to_a_sandbox_without_real_config():
     assert profile in (None, ""), f"HERMES_PROFILE leaks the invoking shell: {profile!r}"
 
 
+def test_agent_source_is_cleared_except_for_explicit_loader_integration():
+    for require_loader in (False, True):
+        env = dict(os.environ, HERMES_AGENT_ROOT='fixture-source',
+                   HERMES_GPT_REQUIRE_AGENT_LOADER='1' if require_loader else '0')
+        proc = subprocess.run(
+            [sys.executable, '-c', 'import conftest,os,json; print(json.dumps(os.environ.get("HERMES_AGENT_ROOT")))'],
+            env=env, cwd=REPO, capture_output=True, text=True, timeout=30, check=True,
+        )
+        assert json.loads(proc.stdout) == ('fixture-source' if require_loader else None)
+
+
 def test_token_keys_stay_in_the_sandbox(tmp_path):
     """Default token-store persistence cannot reach an OS keychain."""
     import token_store

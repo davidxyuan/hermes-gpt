@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
 import sys
 import time
 from pathlib import Path
@@ -511,6 +512,7 @@ def test_run_argv_allows_explicit_higher_timeout_cap(monkeypatch):
 
     def fake_popen(*_args, **kwargs):
         captured["start_new_session"] = kwargs.get("start_new_session")
+        captured["creationflags"] = kwargs.get("creationflags")
         return FakeProcess()
 
     monkeypatch.setattr(subprocess, "Popen", fake_popen)
@@ -523,11 +525,35 @@ def test_run_argv_allows_explicit_higher_timeout_cap(monkeypatch):
     assert captured["timeout"] == 1800
     if os.name == "posix":
         assert captured["start_new_session"] is True
+    elif os.name == "nt":
+        assert captured["creationflags"] == subprocess.CREATE_NO_WINDOW
 
 
 def test_run_argv_refuses_empty_argv():
     with pytest.raises(ValueError):
         op.run_argv([], timeout=5)
+
+
+def test_timeout_never_waits_on_a_surviving_descendants_pipe(monkeypatch):
+    class BlockedPipe:
+        def close(self):
+            pytest.fail('closing a pipe owned by a blocked reader can wait indefinitely on Windows')
+
+    class Process:
+        pid = 12345
+        stdout = stderr = BlockedPipe()
+        def communicate(self, *, timeout):
+            assert timeout is not None
+            raise subprocess.TimeoutExpired('fixture', timeout, output='partial output')
+        def kill(self): pass
+
+    monkeypatch.setattr(subprocess, 'Popen', lambda *args, **kwargs: Process())
+    monkeypatch.setattr(subprocess, 'run', lambda *args, **kwargs: None)
+    if os.name == 'posix':
+        def gone(*args): raise ProcessLookupError()
+        monkeypatch.setattr(os, 'killpg', gone)
+    rc, out, err = op.run_argv(['fixture'], timeout=1)
+    assert rc == 124 and out == 'partial output' and err
 
 
 def test_run_argv_handles_missing_executable():
@@ -564,3 +590,45 @@ def test_run_argv_timeout_kills_descendant_process_group(tmp_path):
         time.sleep(0.05)
 
     assert not Path(f"/proc/{child_pid}").exists()
+
+
+def test_run_argv_timeout_kills_descendant_process_tree_on_windows(tmp_path):
+    if os.name != "nt":
+        pytest.skip("Windows process-tree timeout cleanup is Windows-specific")
+
+    pid_file = tmp_path / "child.pid"
+    parent_script = (
+        "import pathlib, subprocess, sys, time; "
+        "child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)']); "
+        "pathlib.Path(sys.argv[1]).write_text(str(child.pid)); "
+        "time.sleep(60)"
+    )
+
+    started = time.monotonic()
+    rc, out, err = op.run_argv(
+        [sys.executable, "-c", parent_script, str(pid_file)],
+        timeout=1,
+        workdir=str(tmp_path),
+    )
+    elapsed = time.monotonic() - started
+
+    assert rc == 124
+    assert "timed out after 1s" in err
+    assert elapsed < 6
+    assert pid_file.exists()
+
+    child_pid = int(pid_file.read_text())
+    deadline = time.monotonic() + 2.0
+    while time.monotonic() < deadline:
+        result = subprocess.run(
+            ["tasklist", "/FI", f"PID eq {child_pid}", "/FO", "CSV", "/NH"],
+            capture_output=True,
+            text=True,
+            timeout=2,
+            check=False,
+        )
+        if str(child_pid) not in result.stdout:
+            break
+        time.sleep(0.05)
+
+    assert str(child_pid) not in result.stdout

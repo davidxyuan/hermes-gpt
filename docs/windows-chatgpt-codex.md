@@ -48,6 +48,21 @@ codex --version
 
 The Codex or ChatGPT desktop application can remain installed. Hermes GPT must resolve a standalone CLI executable that can actually launch.
 
+## Agent source and user data
+
+For this checkout, `HERMES_AGENT_ROOT` selects one absolute Agent source root,
+including managed directories named `payload`. Set it before launching Hermes
+GPT. It must contain `tools/__init__.py` or `hermes_state.py`; required Agent
+imports must also succeed. Empty, relative, missing or invalid overrides fail
+without falling back to another installation. With the variable unset, existing
+automatic discovery remains available.
+
+`HERMES_HOME` still identifies user data and profiles. Do not change it to the
+Agent source path. The executable on `PATH` and the selected source must belong
+to the intended installation. After starting, check `hermes_operator_status` and
+its `hermes_agent_root` field using the intended connector before accepting an
+upgrade. This checkout change is not yet published in an upstream release.
+
 ## 1. Resolve the Codex CLI cleanly
 
 Inspect candidates:

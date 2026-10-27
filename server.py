@@ -139,6 +139,12 @@ def is_hermes_root(path: Path) -> bool:
 
 
 def candidate_roots() -> list[Path]:
+    explicit = os.environ.get("HERMES_AGENT_ROOT")
+    if explicit is not None:
+        root = Path(explicit).expanduser()
+        if not explicit.strip() or not root.is_absolute() or not is_hermes_root(root):
+            raise RuntimeError("HERMES_AGENT_ROOT must name an existing absolute Hermes Agent source root.")
+        return [root.resolve()]
     candidates: list[Path] = []
     env_home = os.environ.get("HERMES_HOME")
     if env_home:
@@ -219,6 +225,10 @@ def import_hermes() -> None:
         from tools import memory_tool as mt
         from tools import terminal_tool as tt
 
+        if "HERMES_AGENT_ROOT" in os.environ:
+            for module in (ft, mt, tt):
+                if not getattr(module, "__file__", None) or not Path(module.__file__).resolve().is_relative_to(HERMES_ROOT):
+                    raise RuntimeError("Required Agent module was loaded outside HERMES_AGENT_ROOT; restart with the selected source.")
         file_tools = ft
         terminal_tool = tt
         memory_tool = mt
@@ -3822,6 +3832,8 @@ def main(argv: list[str] | None = None) -> None:
     """Run legacy MCP, the Codex MCP alias, or the Codex installer helpers."""
     args = list(sys.argv[1:] if argv is None else argv)
     if args and args[0] == "mcp":
+        if "HERMES_AGENT_ROOT" in os.environ:
+            require_imports()
         _run_codex_mcp(args[1:])
         return
     if args and args[0] == "update":
@@ -3831,6 +3843,8 @@ def main(argv: list[str] | None = None) -> None:
         return
     if args and args[0] == "codex":
         if len(args) > 1 and args[1] == "mcp":
+            if "HERMES_AGENT_ROOT" in os.environ:
+                require_imports()
             _run_codex_mcp(args[2:])
             return
         import codex_config
@@ -3851,6 +3865,8 @@ def main(argv: list[str] | None = None) -> None:
 
         codex_config.main(args[1:], list_tools=list_tools, status=status)
         return
+    if "HERMES_AGENT_ROOT" in os.environ:
+        require_imports()
     _run_legacy_server(args)
 
 

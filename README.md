@@ -171,6 +171,12 @@ The final v0.12.0 wheel and sdist are also attached to the [GitHub v0.12.0 relea
 
 ## Default local MCP surface
 
+When multiple Agent installations exist, set `HERMES_AGENT_ROOT` to the absolute
+Agent source directory before starting this checkout. This overrides discovery;
+an invalid directory or unavailable required Agent imports prevents startup.
+Keep `HERMES_HOME` pointed at the user data/profile directory. See the
+[Windows deployment guide](docs/windows-chatgpt-codex.md#agent-source-and-user-data).
+
 With no optional feature gates enabled, the server exposes a small read-oriented surface:
 
 - `hermes_read_file(path, offset=1, limit=500)`
