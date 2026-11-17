@@ -359,6 +359,55 @@ def test_path_under_allowed_empty_list(tmp_path):
 # ---------------------------------------------------------------------------
 
 
+@pytest.mark.parametrize("profile", ["home", "home/profiles/work"])
+def test_audit_follows_explicit_home_without_touching_legacy_logs(tmp_path, monkeypatch, profile):
+    home = tmp_path / profile
+    legacy = tmp_path / "legacy" / "audit.jsonl"
+    legacy.parent.mkdir()
+    legacy.write_text('{"summary":"previous installation"}\n', encoding="utf-8")
+    fallback = tmp_path / "code" / "audit.jsonl"
+    monkeypatch.setattr(op, "_audit_log_override", None)
+    monkeypatch.setattr(op, "AUDIT_LOG_HERMES_PATH", legacy)
+    monkeypatch.setattr(op, "AUDIT_LOG_FALLBACK_PATH", fallback)
+    monkeypatch.setenv("HERMES_HOME", str(home))
+
+    expected = home / "logs" / "hermes_gpt_operator_audit.jsonl"
+    assert op.audit_log_path() == expected
+    assert not home.exists(), "Reading the configured audit path must not create it"
+    record = op.audit_record(tool="test", level="read_only", apply_mode="dry_run",
+                             dry_run=True, success=True, summary="current profile")
+    assert op.audit_tail() == [record]
+    assert legacy.read_text(encoding="utf-8") == '{"summary":"previous installation"}\n'
+    assert not fallback.exists()
+
+
+def test_explicit_audit_write_failure_does_not_spill_into_legacy_location(tmp_path, monkeypatch):
+    home = tmp_path / "profile"
+    home.mkdir()
+    (home / "logs").write_text("not a directory", encoding="utf-8")
+    monkeypatch.setenv("HERMES_HOME", str(home))
+    monkeypatch.setattr(op, "_audit_log_override", None)
+    monkeypatch.setattr(op, "AUDIT_LOG_HERMES_PATH", tmp_path / "legacy.jsonl")
+    monkeypatch.setattr(op, "AUDIT_LOG_FALLBACK_PATH", tmp_path / "code.jsonl")
+    op.audit_record(tool="test", level="read_only", apply_mode="dry_run",
+                    dry_run=True, success=True)
+    assert not op.AUDIT_LOG_HERMES_PATH.exists()
+    assert not op.AUDIT_LOG_FALLBACK_PATH.exists()
+
+
+@pytest.mark.parametrize("existing_legacy", [False, True])
+def test_unset_audit_home_keeps_legacy_selection(tmp_path, monkeypatch, existing_legacy):
+    monkeypatch.delenv("HERMES_HOME", raising=False)
+    monkeypatch.setattr(op, "_audit_log_override", None)
+    legacy = tmp_path / "legacy" / "audit.jsonl"
+    fallback = tmp_path / "code" / "audit.jsonl"
+    monkeypatch.setattr(op, "AUDIT_LOG_HERMES_PATH", legacy)
+    monkeypatch.setattr(op, "AUDIT_LOG_FALLBACK_PATH", fallback)
+    if existing_legacy:
+        legacy.parent.mkdir()
+    assert op.audit_log_path() == (legacy if existing_legacy else fallback)
+
+
 def test_audit_log_records_mutation_summary(tmp_path, monkeypatch):
     log_path = tmp_path / "audit.jsonl"
     op.set_audit_log_override(log_path)

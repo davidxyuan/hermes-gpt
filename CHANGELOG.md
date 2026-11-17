@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Keep Operator audit reads and writes under an explicit `HERMES_HOME`, so a
+  separate profile does not use another installation's logs or write into the
+  program directory. Existing logs are retained without automatic migration.
 - Preserve the Windows fork's hidden Operator subprocesses and bounded timeout
   cleanup. If descendant pipes remain open after cleanup, return an explicit
   unverified-cleanup error rather than waiting indefinitely on a pipe reader.

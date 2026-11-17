@@ -42,7 +42,7 @@ OWNER_ACTIVE_ENV = "HERMES_GPT_OWNER_ACTIVE"
 
 OWNER_ACK_REQUIRED_VALUE = "I_UNDERSTAND_THIS_CAN_MUTATE_MY_MACHINE"
 
-# Default audit log locations (tried in order; first writable wins).
+# Legacy locations when HERMES_HOME is not configured.
 AUDIT_LOG_HERMES_PATH = Path.home() / "AppData" / "Local" / "hermes" / "logs" / "hermes_gpt_operator_audit.jsonl"
 AUDIT_LOG_FALLBACK_PATH = Path(__file__).resolve().parent / "logs" / "hermes_gpt_operator_audit.jsonl"
 
@@ -763,7 +763,9 @@ def audit_log_path() -> Path:
     with _audit_lock:
         if _audit_log_override is not None:
             return _audit_log_override
-    # Prefer the Hermes logs dir if it exists / is writable.
+    if home := os.environ.get("HERMES_HOME"):
+        return Path(home).expanduser() / "logs" / "hermes_gpt_operator_audit.jsonl"
+    # Preserve the legacy location when no explicit profile is selected.
     try:
         if AUDIT_LOG_HERMES_PATH.parent.exists():
             return AUDIT_LOG_HERMES_PATH

@@ -176,6 +176,8 @@ Agent source directory before starting this checkout. This overrides discovery;
 an invalid directory or unavailable required Agent imports prevents startup.
 Keep `HERMES_HOME` pointed at the user data/profile directory. See the
 [Windows deployment guide](docs/windows-chatgpt-codex.md#agent-source-and-user-data).
+Operator audit records also follow this directory; existing logs remain in their
+original location. See [audit behavior](docs/operator-mode.md#audit-behavior).
 
 With no optional feature gates enabled, the server exposes a small read-oriented surface:
 

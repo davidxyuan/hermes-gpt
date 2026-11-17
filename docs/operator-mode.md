@@ -446,13 +446,26 @@ For Codex acting as an MCP client, use [docs/codex.md](codex.md). For the Window
 
 ## Audit behavior
 
-Preferred audit path on Windows:
+When `HERMES_HOME` is set, audit reads and writes use that exact data/profile
+directory, including a named profile:
+
+```text
+<HERMES_HOME>/logs/hermes_gpt_operator_audit.jsonl
+```
+
+The log directory is created on the first write. An unavailable destination does
+not redirect records into another installation or the program directory. Audit
+writes retain their best-effort behavior: the tool returns the record even if it
+cannot be persisted. Existing logs are not moved or merged automatically; retain
+them separately when changing `HERMES_HOME`.
+
+Without `HERMES_HOME`, the legacy Windows path is used if its parent exists:
 
 ```text
 %USERPROFILE%\AppData\Local\hermes\logs\hermes_gpt_operator_audit.jsonl
 ```
 
-Fallback:
+Otherwise, the legacy fallback is:
 
 ```text
 <hermes-gpt>\logs\hermes_gpt_operator_audit.jsonl
