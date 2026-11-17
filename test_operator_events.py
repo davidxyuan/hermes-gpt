@@ -7,10 +7,13 @@ import os
 import sqlite3
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
 import operator_events as ev
+
+NOW = datetime(2026, 8, 16, tzinfo=timezone.utc)
 
 
 @pytest.fixture
@@ -26,6 +29,8 @@ def hermes_root(tmp_path: Path) -> Path:
 
 @pytest.fixture(autouse=True)
 def clean_events_env(monkeypatch):
+    # Keep the fixed event fixtures inside the real retention policy's window.
+    monkeypatch.setattr(ev, "time", SimpleNamespace(time=lambda: NOW.timestamp()))
     for name in (
         ev.EVENTS_ALLOWED_SOURCES_ENV,
         ev.EVENTS_MAX_AGE_DAYS_ENV,
@@ -123,6 +128,7 @@ def test_no_raw_body_across_all_sources(hermes_root):
         [{"timestamp": "2026-08-15T15:00:00+00:00", "tool": "hermes_skill_create", "profile": "dev", "success": True, "summary": "created skill", "prompt": "SECRET PROMPT BODY with api key sk-1234567890abcdefghijklmnop", "content": "raw content body"}],
     )
     out = json.loads(ev.hermes_events_tail(limit=100, hermes_root=hermes_root))
+    assert out["count_total"] >= 6
     raw = json.dumps(out)
     for forbidden in (
         "SECRET PROMPT BODY",
@@ -160,7 +166,7 @@ def test_allowlist_empty_denies_all(hermes_root, monkeypatch):
 
 def test_retention_window_filters_old_events(hermes_root, monkeypatch):
     monkeypatch.setenv(ev.EVENTS_MAX_AGE_DAYS_ENV, "1")
-    fresh = (datetime.now(timezone.utc) - timedelta(hours=12)).isoformat()
+    fresh = (NOW - timedelta(hours=12)).isoformat()
     _write_audit(hermes_root, [{"timestamp": "2020-01-01T00:00:00+00:00", "tool": "hermes_contract_validate", "profile": "dev", "success": True, "summary": "ancient"}])
     _write_audit(hermes_root, [{"timestamp": fresh, "tool": "hermes_contract_validate", "profile": "dev", "success": True, "summary": "fresh"}])
     out = json.loads(ev.hermes_events_query(source="audit", hermes_root=hermes_root))
