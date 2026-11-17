@@ -287,7 +287,9 @@ def test_windows_hash_accepts_stable_file_with_different_stat_and_fstat_ctime(tm
     birthtime = getattr(initial, "st_birthtime_ns", 0)
     fd_stat = SimpleNamespace(**{**fields, "st_ctime_ns": initial.st_ctime_ns + 1000},
                               st_birthtime_ns=birthtime)
-    monkeypatch.setattr(contracts.sys, "platform", "win32")
+    # Limit simulated Windows stats to the module, not pytest's own file handles.
+    monkeypatch.setattr(contracts, "sys", SimpleNamespace(platform="win32"))
+    monkeypatch.setattr(contracts, "os", SimpleNamespace(**vars(contracts.os)))
     monkeypatch.setattr(contracts.os, "fstat", lambda fd: fd_stat)
     assert contracts._artifact_hash(artifact) == hashlib.sha256(b"stable").hexdigest()
     contract = {"allowed_scope": {"workspaces": [str(tmp_path)]}, "expected_artifacts": [
