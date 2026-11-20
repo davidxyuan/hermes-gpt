@@ -1,5 +1,8 @@
 # Flight Deck Missions (v0.9)
 
+For the v0.17 guided launch, durable receipt recovery, pending-review workbench and read-only delivery page, see [Daily Operations](daily-operations.md). Existing Operator, direct, Autopilot and Owner gates remain authoritative.
+
+
 Flight Deck exposes first-class Missions as a read-only operational view. The browser does not gain Mission mutation, dispatch, cancellation, reconciliation, or approval authority.
 
 ## Routes
@@ -20,7 +23,21 @@ The detail endpoint captures its live-event cursor before reading the Mission sn
 
 ## Authority boundary
 
-The Mission UI contains no direct mutation controls. State transitions, attachment writes, reconciliation, delegation dispatch/cancel, and Owner approval continue through their existing operator surfaces and policy gates. Flight Deck is presentation and observation only.
+The Mission screens (list, detail, Autopilot panel) contain no mutation controls. State transitions, attachment writes, reconciliation, delegation dispatch/cancel, and Owner approval continue through their existing operator surfaces and policy gates. The one place the Flight Deck acts on Missions is the Owner inbox, described below: its actions call the same gated tools through `POST /api/ops/action`, and they add no authority.
+
+## Owner inbox actions (v0.16)
+
+Status: shipped in v0.16.0 (the Owner inbox Flight Deck actions and their approval-frontier gates).
+
+The Owner inbox panel (`GET /api/ops/owner-inbox`) offers per-item actions for Missions that wait on the Owner. Each action is a dry-run request followed by a separate confirm request. The server enforces every gate, including Owner Mode, and refuses with the tool's own message.
+
+- `mission_awaiting_approval`: **Approve Mission…** calls `hermes_mission_approve`. The Owner enters an approval reference. Owner Mode must be active on the server. With it off, the browser shows the refusal and nothing is approved.
+- `autopilot_waiting_owner`: **Approve node `<id>`…** for each frontier node calls `hermes_plan_approve_gate` (v0.16.1), which walks the legal state path to `completed`; its dry run lists the steps. **Reject node `<id>`…** calls `hermes_plan_node_transition` with target `failed`. Both are restricted to an approval frontier: an approval or high-impact node, with Owner Mode required. **Stop Autopilot…** calls `hermes_autopilot_stop`, which is not behind `HERMES_GPT_AUTOPILOT`.
+- Every item: **Acknowledge** calls `hermes_owner_inbox_ack`. It hides the item and changes nothing else.
+
+The full table, the exact checks, and the refusal codes are in [owner-inbox.md](owner-inbox.md#flight-deck-actions). The allowlist and request protections are in [ui-security-boundary.md](ui-security-boundary.md#6-mutations-remain-auditable-and-gated).
+
+Mission detail and Autopilot screens still have no action controls. Starting Autopilot, dispatch, reconciliation and every other Mission mutation stay in MCP.
 
 ## Autopilot view (v0.13)
 

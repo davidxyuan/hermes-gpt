@@ -16,6 +16,13 @@ import pytest
 import operator_skill_resolution as _skill_resolution
 
 _ISOLATED_ENV_VARS = (
+    "HERMES_GPT_ENABLE_JEV",
+    "HERMES_GPT_REVIEW_ASSIST",
+    "HERMES_GPT_TOOL_PROFILE",
+    "HERMES_GPT_JEV_ADAPTER_ROOT",
+    "HERMES_GPT_JEV_NODE",
+    "TYPESAFE_API_KEY",
+    "TYPESAFE_MODEL",
     "HERMES_GPT_OPERATOR_ENABLED",
     "HERMES_GPT_OPERATOR_LEVEL",
     "HERMES_GPT_OPERATOR_APPLY_MODE",
@@ -156,6 +163,22 @@ def wire(model):
     correct on both SDK families.
     """
     return model.model_dump(by_alias=True)
+
+
+@pytest.fixture(name="wire")
+def _wire_fixture():
+    """Render an MCP SDK object in wire (alias) form for assertions.
+
+    Returns ``model.model_dump(by_alias=True, exclude_none=True)``. Compare
+    annotations, server info and schemas through this, never through SDK
+    attribute names (``readOnlyHint`` vs ``read_only_hint``), so one test runs
+    on both the SDK 1 and SDK 2 families. Unset fields are omitted.
+    """
+
+    def _wire(model) -> dict:
+        return model.model_dump(by_alias=True, exclude_none=True)
+
+    return _wire
 
 
 @pytest.fixture(autouse=True)

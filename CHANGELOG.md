@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## Unreleased fork changes
 
 - Keep Operator audit reads and writes under an explicit `HERMES_HOME`, so a
   separate profile does not use another installation's logs or write into the
@@ -13,6 +13,66 @@
 - Allow explicit Agent source selection through `HERMES_AGENT_ROOT`, separate
   from `HERMES_HOME` data/profile storage. Invalid overrides and unavailable
   required imports prevent startup instead of selecting an older installation.
+
+## 0.18.0 — Agent readiness and compatibility
+
+- Add read-only Flight Deck Agent readiness: separate server source and CLI identity, static protocol declarations, prior authorized preflight observations, session-control gate state, and an explicit unverified live-acceptance boundary. No Agent code execution, turn submission or configuration changes.
+- Bound the existing session-control execution path's help probe by time and output size; failures and uncertain observations refuse submission. Raw help, errors and private paths are not exposed by readiness.
+- Support the public `find_all_skills` Agent API with legacy `_find_all_skills` fallback. Keep explicit `skill_view(..., preprocess=False)` authoritative and fail closed if the loader is unavailable.
+- Exercise both exact modern and legacy Agent source revisions in CI. These are loader compatibility tests, not certification of a full Agent installation.
+- Preserve the default 139-tool MCP inventory (140 with Finance), schemas and all existing authority gates.
+
+## 0.17.0 — Daily Operations
+
+- Add optional stable `request_id` to Mission launch. Commit durable intent before effects, checkpoint completed steps, reject changed payloads, and return the original receipt on replay without redispatch.
+- Add Flight Deck New Mission with bounded defaults, explicit budget omission, preview/confirm, and receipt-only recovery after disconnect.
+- Link pending contract reviews from the Owner inbox to exact contract/task/delegation evidence. Refuse stale bindings and executing reviewers; retain Owner authorization and separate reconciliation/final approval.
+- Add read-only delivery health with masked targets, pending counts, backoff, and `SENT_UNVERIFIED` disclosure. Agent compatibility is explicitly not probed by this page.
+- Preserve default tool counts and gates. Launch's additive schema change requires client action/schema refresh. Receipt retention is capped at 10,000 with no automatic expiry.
+
+## 0.16.2 - 2026-10-29
+
+- Session continuation uses a finite, non-auto-approving stream-json CLI turn. Completion requires a matching terminal result and zero exit code. Durable reservations prevent duplicate submission after ambiguous outcomes; bounded parsing excludes tool event bodies from persisted results. Unsupported CLIs are refused before submission. Live Desktop acceptance is not yet certified.
+- Publish the exact wheel and sdist validated by CI instead of rebuilding during upload. Tag/version mismatch refuses publication.
+- Correct current release documentation and tool counts.
+
+- Autopilot records why a run ended (`max_runtime_exceeded`, or the crash reason) before it terminalizes the job. A status read in between could reconcile the run to `failed` with no `last_error`; this was an intermittent CI failure in `test_real_worker_ends_a_run_that_is_out_of_time_with_nothing_in_flight`.
+
+## 0.16.1 - 2026-10-22
+
+- Flight Deck reject works on a reached gate in any state that may fail, including the `pending` state Autopilot leaves it in. An unreached gate is still refused. The owner inbox now suggests `hermes_plan_approve_gate` for Autopilot gates.
+- Attention delivery: iMessage sends that `imsg` cannot confirm (`retry_safe: false` / "Delivery outcome unknown") or that time out after the request was written are recorded as delivered, flagged `SENT_UNVERIFIED` in `last_warning`, and never resent. Previously each relay pass would have resent them, duplicating messages that had already arrived. Found in the first live iMessage test.
+- Added `hermes_plan_approve_gate`, an Owner-only way to approve a gated plan node (an approval node or `high_impact`) to `completed` in one call. Before, approving a gate took six separate `hermes_plan_node_transition` calls, and the Flight Deck's **Approve node** was refused for a `pending` gate. The tool computes the shortest legal path from `NODE_TRANSITIONS`, applies it one step at a time through the existing transition with a plan-version compare-and-swap, and dry-runs by default. Intermediate states are ordinary state-machine steps and do not claim that review happened. A refused step stops the walk with no rollback, and the result lists the applied steps. The Flight Deck approve now uses this tool, and the browser transition is reject-only. The tool count is 139 with every optional gate unset and 140 with `HERMES_GPT_ENABLE_FINANCE=1`. See [docs/owner-inbox.md](docs/owner-inbox.md#owner-gate-approval-hermes_plan_approve_gate).
+
+## 0.16.0 - 2026-10-21
+
+Close the loop: what waits on the Owner now reaches them and can be resolved in one place, with no new authority.
+
+- Added the default-off attention delivery relay. It sends new Owner inbox items as short notifications to administrator-configured targets (`HERMES_GPT_ATTENTION_TARGETS`, up to 8 `backend:target` entries). The `hermes` backend runs `hermes send` and reuses the platforms already configured in Hermes Agent; the doc's examples are telegram, discord, slack, and signal. The `imessage` backend sends through `imsg rpc`. The relay adds per-item dedupe, one digest per target when many items are new, per-target exponential backoff, and a minimal child environment, and it holds no platform credentials. It never approves, advances, or replies. Run it as `python -m operator_attention_delivery` or the `hermes-gpt-attention-relay` console script. See [docs/attention-delivery.md](docs/attention-delivery.md).
+- Added the read-only `hermes_attention_delivery_status` tool, registered only with `HERMES_GPT_ATTENTION_DELIVERY=1`. It reports the relay's state and sends nothing.
+- Added a Work Contract review source to the Owner inbox. A successful delegation whose contract still needs review acceptance appears as `contract_review_pending`. Inbox items now carry stable `item_id`s derived from the item kind, Mission, and a timestamp-free key, so an id does not change when nothing changed.
+- Added acknowledgements and `hermes_owner_inbox_ack`. It is always registered, requires workspace level and direct apply mode for a write, and is dry run by default. An acknowledgement hides an item from the inbox and from the relay. It never approves or changes a Mission, plan, Work Contract, or delegation.
+- Added Flight Deck inbox actions: Approve Mission, approve or reject an approval-frontier node, Stop Autopilot, and Acknowledge. Each calls the existing gated tool through `POST /api/ops/action`, with a dry-run request before the confirm. Browser node transitions require Owner mode and are limited to approval and `high_impact` nodes. See [docs/owner-inbox.md](docs/owner-inbox.md#flight-deck-actions).
+- Security: `POST /api/ops/action` refuses cross-site requests. A non-JSON body returns `415 UNSUPPORTED_MEDIA_TYPE`, and a foreign `Sec-Fetch-Site` or `Origin` returns `403 CROSS_SITE_REFUSED`. These checks apply on loopback too and do not replace the Operator gates. See [UI security boundary](docs/ui-security-boundary.md#6-mutations-remain-auditable-and-gated).
+- Added `hermes_mission_launch`, a one-call launch that creates a Mission, derives its plan, optionally sets a budget, and starts Autopilot. It is registered only with `HERMES_GPT_AUTOPILOT=1`, is dry run by default, requires `confirm=true` to apply, stops at the first refusal, and never approves a Mission. Finding: a Mission with no budget envelope is not held by the budget gate. Only a crossed, invalid, or unreadable envelope holds dispatch. See [docs/autopilot.md](docs/autopilot.md#one-call-launch-v016).
+- Added `hermes-gpt update --apply --version X.Y.Z` for a safe package-installed upgrade inside one named virtual environment. It verifies the wheel digest, refuses downgrades, snapshots the previous wheel, checks the import, and rolls back on failure. See [docs/updating.md](docs/updating.md).
+- Fixed contract review. The validator and the owner inbox now read the whole review-acceptance store, so a late acceptance counts. Previously a busy store could leave a contract unsatisfied after 200 acceptances. `read_review_acceptances`, the Flight Deck recent-records list, now returns the newest records.
+- Fixed the `hermes_owner_inbox` MCP tool, whose success path failed because of a positional argument.
+- Added an SDK-neutral `wire` fixture in `conftest.py`. It returns MCP objects in protocol alias form, so tests assert on names such as `readOnlyHint` and do not depend on SDK attribute names.
+- Tool registration is now declared as per-subsystem tables (behavior-neutral).
+- Tool count: 138 tools with every optional gate unset. The connector acceptance surface, which sets `HERMES_GPT_ENABLE_FINANCE=1`, has 139. `HERMES_GPT_AUTOPILOT=1` adds 4 (the three Autopilot tools and `hermes_mission_launch`), `HERMES_GPT_ATTENTION_DELIVERY=1` adds 1, `HERMES_GPT_ENABLE_JEV=1` adds 3, and `hermes_review_assess` adds 1 more when both `HERMES_GPT_ENABLE_JEV=1` and `HERMES_GPT_REVIEW_ASSIST=1` are set.
+
+## 0.15.0 - 2026-10-21
+
+Owner Loop: faster Owner decisions without new authority.
+
+- Added the read-only `hermes_owner_inbox` tool (always registered) and the Flight Deck read-only route `GET /api/ops/owner-inbox` with a read-only Owner inbox panel linked from the Deck overview. It lists Missions awaiting approval, Autopilot runs waiting for the Owner, and controller attention, with source health (`complete`) and suggested existing tools. It never approves, advances, or writes. See [docs/owner-inbox.md](docs/owner-inbox.md).
+- Added advisory review assist: `hermes_review_assess` scores a dispatched Work Contract through the pinned Jev adapter. It is registered only with `HERMES_GPT_ENABLE_JEV=1` and `HERMES_GPT_REVIEW_ASSIST=1`, requires the `read_only` Operator level, is advisory only, is never Work Contract evidence or review acceptance, and writes an audit record without a `task_id`. See [docs/review-assist.md](docs/review-assist.md).
+- Added `HERMES_GPT_TOOL_PROFILE` connector tool profiles (`full` default, `operator`, `chat-lean`). Profiles only remove tools; invalid values fail closed. See [docs/mcp-compatibility.md](docs/mcp-compatibility.md#connector-tool-profiles).
+- Made file backups configurable and safer: `HERMES_GPT_OPERATOR_FILE_BACKUPS` disables backups only for `0`, `false`, `no`, `off`, or `disabled` (case-insensitive). Unset, empty, or unrecognized values keep backups on. Thanks to @brunocasado for #85.
+- Added the default-off Jev decision bridge, with three tools reusing the pinned community `jev-mcp` adapter. See [docs/jev.md](docs/jev.md).
+- Docs hygiene (#94): corrected the default main-server inventory and source UI build instructions, replaced host-specific runtime notes with a generic provenance guide, and clarified unreleased-source versus package/runtime state.
+- Tool count: the default connector surface is 138 tools (137 in v0.14.0, plus `hermes_owner_inbox`). `HERMES_GPT_AUTOPILOT=1` adds 3 tools, `HERMES_GPT_ENABLE_JEV=1` adds 3, and `hermes_review_assess` adds 1 more when both Jev and review-assist gates are set.
 
 ## 0.14.0 - 2026-10-03
 

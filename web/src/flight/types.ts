@@ -131,3 +131,38 @@ export function isStale(state: Pick<FetchState<unknown>, 'fetchedAt' | 'ttl'>): 
   if (state.fetchedAt == null || state.ttl == null || state.ttl <= 0) return false;
   return Date.now() - state.fetchedAt > state.ttl * 1000;
 }
+
+/** Owner inbox item (GET /api/ops/owner-inbox). Read-only projection. */
+export interface OwnerInboxItem {
+  /** Stable 24-hex id; acknowledgements and the Flight Deck actions key on it. */
+  item_id: string;
+  kind: string;
+  mission_id: string;
+  summary: string;
+  since: string | null;
+  suggested_tool: string | null;
+  requires: 'owner' | 'workspace' | 'review';
+  /** autopilot_waiting_owner only: the mission's plan key (equals mission_id). */
+  plan_id?: string;
+  /** autopilot_waiting_owner only: the full sorted frontier node ids. */
+  frontier_node_ids?: string[];
+  contract_sha256?: string;
+  task_id?: string;
+  delegation_id?: string;
+  review_revision?: string;
+}
+
+export type OwnerInboxSourceState = 'ok' | 'unavailable' | 'empty';
+
+/** Owner inbox payload (the `data` of the `{ok, data}` envelope). */
+export interface OwnerInboxPayload {
+  items: OwnerInboxItem[];
+  count: number;
+  truncated: boolean;
+  limit: number;
+  sources: Record<string, OwnerInboxSourceState>;
+  complete: boolean;
+  skipped_sources: string[];
+  read_only: true;
+  generated_at: string;
+}

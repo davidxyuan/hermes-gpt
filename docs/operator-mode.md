@@ -1,6 +1,9 @@
 # Operator Mode for Hermes GPT
 
-Operator Mode is the policy-gated control plane for trusted MCP clients such as ChatGPT. This document describes the current v0.13.0 behavior, including the durable Mission lifecycle, unified delegation lineage, live-event bus, and Fabric-backed cross-machine Swarm execution, plus the vNext slice-1 additive surfaces (MissionPlan DAG, derived capability-manifest / mission-ledger views, budget envelope, placement scoring, failure classification + recovery matrix, and the shadow/observe mission controller) and the vNext slice-2 gated execution rungs (budget D3 hard-block enforcement behind `HERMES_GPT_BUDGET_HARD_BLOCK=1`, and the controller L2 rung behind `HERMES_GPT_CONTROLLER_EXECUTE=1`). The slice-1 surfaces are decision-only; the slice-2 rungs are default-off, add no tools, and keep every existing surface byte-identical until their gates are armed. They are documented further in [vnext-capability-manifest-and-mission-ledger.md](vnext-capability-manifest-and-mission-ledger.md) and [design/](design/).
+For the v0.17 guided launch, durable receipt recovery, pending-review workbench and read-only delivery page, see [Daily Operations](daily-operations.md). Existing Operator, direct, Autopilot and Owner gates remain authoritative.
+
+
+Operator Mode is the policy-gated control plane for trusted MCP clients such as ChatGPT. This document describes the current v0.16.0 behavior, including the durable Mission lifecycle, unified delegation lineage, live-event bus, and Fabric-backed cross-machine Swarm execution, plus the vNext slice-1 additive surfaces (MissionPlan DAG, derived capability-manifest / mission-ledger views, budget envelope, placement scoring, failure classification + recovery matrix, and the shadow/observe mission controller) and the vNext slice-2 gated execution rungs (budget D3 hard-block enforcement behind `HERMES_GPT_BUDGET_HARD_BLOCK=1`, and the controller L2 rung behind `HERMES_GPT_CONTROLLER_EXECUTE=1`). The slice-1 surfaces are decision-only; the slice-2 rungs are default-off, add no tools, and keep every existing surface byte-identical until their gates are armed. They are documented further in [vnext-capability-manifest-and-mission-ledger.md](vnext-capability-manifest-and-mission-ledger.md) and [design/](https://github.com/asimons81/hermes-gpt/tree/master/docs/design).
 
 For documentation authority and historical-artifact rules, see [docs/README.md](README.md).
 
@@ -126,6 +129,12 @@ Tools that create or dispatch external work also require `confirm=true` when the
 
 A refusal caused by a missing gate is expected behavior, not a failure to execute the request.
 
+### Optional file backups
+
+`hermes_workspace_patch`, `hermes_workspace_write_file`, `hermes_owner_patch`, and `hermes_owner_write_file` create timestamped sibling backups (`<name>.bak.<timestamp>`) before replacing an existing file. This remains enabled by default.
+
+Backups are disabled only by an explicit recognized false value of `HERMES_GPT_OPERATOR_FILE_BACKUPS`: `0`, `false`, `no`, `off`, or `disabled` (case-insensitive, surrounding whitespace ignored). Set one of these to skip the backup copies when the target workspace already has an appropriate version-control or rollback strategy. An unset, empty, or unrecognized value (for example a typo such as `flase`) keeps backups on. Disabling backups does **not** change Operator authorization, dry-run/confirmation gates, denied-path policy, or atomic replace writes; successful tool results report `"backup": null` when no copy is created.
+
 ## Mission Control
 
 Mission Control is the read-only `hermes_mission_*` operational view of the Hermes deployment.
@@ -223,6 +232,16 @@ skills against the assigned profile's effective Hermes Agent loader immediately
 before invoking the runner. This is a live guard against profile changes after
 planning; rejection is non-mutating. Fabric eligibility remains separate from
 logical profile skill ownership.
+
+The catalog adapter prefers Hermes Agent's public `find_all_skills()` API and
+supports the older `_find_all_skills()` API. Both require the Agent's
+`skill_view()` explicit loader; an absent or incompatible loader refuses
+required-skill validation as `skill_resolution_unavailable`. Catalog discovery
+only explains provenance. The dispatch guard still calls
+`skill_view(..., preprocess=False)` freshly and never executes inline shell
+snippets. CI checks these loader interfaces against pinned modern and legacy
+Agent source with focused loader dependencies; it does not certify a complete
+Agent installation or live session execution.
 
 ### Validation model
 

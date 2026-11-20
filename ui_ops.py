@@ -26,25 +26,36 @@ from __future__ import annotations
 
 import json
 import threading
+from collections.abc import Callable
 from datetime import datetime, timezone
-from typing import Any, Callable
+from typing import Any
+from urllib.parse import urlsplit
 
 from starlette.concurrency import run_in_threadpool
 from starlette.requests import Request
 from starlette.responses import JSONResponse
 from starlette.routing import Route
 
-import operator_policy as op
-import operator_mission as op_mission
-import operator_events as op_events
-import operator_swarm as op_swarm
+import operator_agent_readiness as op_agent_readiness
+import operator_attention_delivery as op_delivery
+import operator_autopilot as op_autopilot
 import operator_codex as op_codex
 import operator_cron as op_cron
-import operator_fleet as op_fleet
-import operator_review as op_review
+import operator_delegations as op_delegations
 import operator_diagnostics as op_diagnostics
-import operator_recovery as op_recovery
+import operator_events as op_events
+import operator_fleet as op_fleet
+import operator_mission as op_mission
+import operator_mission_launch as op_launch
+import operator_mission_plan as op_plan
+import operator_mission_runtime as op_mission_rt
 import operator_oauth as op_oauth
+import operator_owner_inbox as op_owner_inbox
+import operator_policy as op
+import operator_recovery as op_recovery
+import operator_review as op_review
+import operator_swarm as op_swarm
+import ui_security
 from versioning import VERSION
 
 # The 12 Mission Control surfaces (must match operator_mission.MISSION_SURFACES).
@@ -70,6 +81,13 @@ _SURFACE_DICT_FNS: dict[str, Callable[..., dict[str, Any]]] = {
 _REVIEW_RECORD_LIMIT = 200
 # Max workflow rows surfaced in the contracts list read-model.
 _CONTRACT_WORKFLOW_LIMIT = 50
+_agent_root_provider: Callable[[], Any] = lambda: None
+
+
+def set_agent_root_provider(provider: Callable[[], Any]) -> None:
+    """Bind the exact running server selection without importing server again."""
+    global _agent_root_provider
+    _agent_root_provider = provider
 
 
 # ---------------------------------------------------------------------------
@@ -377,6 +395,92 @@ def _cron_detail(request: Request) -> JSONResponse:
     return _json_resp(_ok({"success": True, "job": job}), 200)
 
 
+def _daily_read_gate(surface: str) -> JSONResponse | None:
+    try:
+        op.OperatorPolicy().require_level("read_only")
+        if not op_mission._surface_allowed(surface):
+            raise PermissionError("surface denied")
+    except PermissionError:
+        return _json_resp(_err("AUTHZ_DENIED", "This read surface is not allowed.", 403), 403)
+    return None
+
+
+def _launch_receipt(request: Request) -> JSONResponse:
+    refusal = _daily_read_gate("delegations")
+    if refusal is not None:
+        return refusal
+    payload = op_launch.launch_receipt(request.path_params["request_id"], _resolve_root())
+    if not payload.get("success"):
+        return _json_resp(_err(payload["code"], payload["safe_message"], 400), 400)
+    return _json_resp(_ok(payload))
+
+
+def _pending_review_item(item_id: str, root: Any) -> dict[str, Any] | None:
+    if not isinstance(item_id, str) or not op_owner_inbox._ITEM_ID_RE.fullmatch(item_id):
+        return None
+    _, items = op_owner_inbox._review_items(root)
+    return next((item for item in items if item["item_id"] == item_id), None)
+
+
+def _pending_review(request: Request) -> JSONResponse:
+    refusal = _daily_read_gate("approvals")
+    if refusal is not None:
+        return refusal
+    try:
+        item = _pending_review_item(request.path_params["item_id"], _resolve_root())
+    except Exception:  # noqa: BLE001 - unavailable evidence must fail closed
+        return _json_resp(_err("REVIEW_UNAVAILABLE", "Review evidence is unavailable.", 503), 503)
+    if item is None:
+        return _json_resp(_err("REVIEW_NOT_PENDING", "This review is no longer pending.", 404), 404)
+    return _json_resp(_ok({"item": item, "read_only": True}))
+
+
+def _delivery_status(request: Request) -> JSONResponse:
+    refusal = _daily_read_gate("health")
+    if refusal is not None:
+        return refusal
+    payload = op_delivery.status(_resolve_root())
+    payload["hermes_gpt_version"] = VERSION
+    payload["session_protocol"] = "finite-stream-json"
+    payload["agent_compatibility"] = "not_probed"
+    return _json_resp(_ok(payload))
+
+
+def _agent_readiness(request: Request) -> JSONResponse:
+    refusal = _daily_read_gate("health")
+    if refusal is not None:
+        return refusal
+    try:
+        payload = op_agent_readiness.readiness(_agent_root_provider())
+    except (OSError, ValueError, RuntimeError):
+        return _json_resp(_err("READINESS_UNAVAILABLE", "Local Agent readiness is unavailable.", 503), 503)
+    return _json_resp(_ok(payload))
+
+
+def _owner_inbox(request: Request) -> JSONResponse:
+    """GET /api/ops/owner-inbox — read-only projection of what waits on the Owner.
+
+    Read-only: lists items and suggested existing tools; never approves or
+    advances. Gated by the ``approvals`` Mission Control allowlist entry, since
+    the inbox aggregates Mission approval state.
+    """
+    raw_limit = request.query_params.get("limit")
+    try:
+        limit = int(raw_limit) if raw_limit not in (None, "") else op_owner_inbox.DEFAULT_LIMIT
+    except ValueError:
+        return _json_resp(_err("INVALID_LIMIT", "limit must be an integer between 1 and 200", 400), 400)
+    if not op_mission._surface_allowed("approvals"):  # noqa: SLF001
+        return _json_resp(ui_security.error_envelope("AUTHZ_DENIED", "Owner inbox is not allowed for this client."), 403)
+    try:
+        payload = op_owner_inbox.build_inbox(hermes_root=_resolve_root(), limit=limit)
+    except ValueError as exc:
+        return _json_resp(_err("INVALID_LIMIT", op.redact_output(str(exc))[:200], 400), 400)
+    except Exception as exc:  # noqa: BLE001
+        return _json_resp(_err("INTERNAL", f"owner inbox failed: {op.redact_output(str(exc))[:300]}"), 500)
+    _audit("hermes_owner_inbox", success=True, summary=f"owner inbox count={payload['count']} complete={payload['complete']}")
+    return _json_resp(ui_security.ok(payload), 200)
+
+
 def _account(request: Request) -> JSONResponse:
     """GET /api/ops/account — operator policy + OAuth store status + version.
 
@@ -414,7 +518,7 @@ def _account(request: Request) -> JSONResponse:
 
 
 class _MutationSpec:
-    __slots__ = ("fn", "args", "required_level", "confirm_gated", "long_running", "apply_flag")
+    __slots__ = ("fn", "args", "required_level", "confirm_gated", "long_running", "apply_flag", "precheck")
 
     def __init__(
         self,
@@ -425,6 +529,7 @@ class _MutationSpec:
         confirm_gated: bool = False,
         long_running: bool = False,
         apply_flag: bool = False,
+        precheck: Callable[[dict[str, Any], Any, bool], JSONResponse | None] | None = None,
     ) -> None:
         self.fn = fn
         self.args = set(args)
@@ -434,14 +539,221 @@ class _MutationSpec:
         # apply_flag tools use an ``apply`` boolean instead of dry_run/confirm
         # (hermes_operator_recover / hermes_swarm_reconcile).
         self.apply_flag = apply_flag
+        # Optional read-only check run before the gated function (both dry and
+        # direct). It may refuse (return a JSONResponse) or add server-derived
+        # kwargs to ``kwargs`` in place. Never client-controlled.
+        self.precheck = precheck
+
+
+# Plan node states from which an approval frontier is resolved. Approve is no
+# longer a browser transition: it is ``hermes_plan_approve_gate``, which walks
+# the legal path to completed. Reject stays a browser transition, and only from
+# ``awaiting_approval`` to ``failed``. ``paused`` is legal in the state machine
+# but does not resolve the frontier, so it is never a browser target.
+_APPROVAL_REJECT_TARGET = "failed"
+_ACK_MAX_IDS = 50
+
+
+def _refuse_approval(tool: str, message: str) -> JSONResponse:
+    code = "APPROVAL_GATE_REFUSED" if tool == "hermes_plan_approve_gate" else "APPROVAL_TRANSITION_REFUSED"
+    return _json_resp(_err(code, message, 400, extra={"tool": tool}), 400)
+
+
+def _refuse_approval_transition(message: str) -> JSONResponse:
+    return _refuse_approval("hermes_plan_node_transition", message)
+
+
+def _read_gated_plan_node(
+    kwargs: dict[str, Any], root: Any, tool: str
+) -> tuple[dict[str, Any] | None, JSONResponse | None]:
+    """Read-only lookup of the plan node a browser approval request names.
+
+    Returns ``(node, None)`` for a gated node on a readable plan, or
+    ``(None, refusal)``. The node is always re-derived here from the plan, never
+    trusted from the request.
+    """
+    mission_id = kwargs.get("mission_id")
+    node_id = kwargs.get("node_id")
+    if not all(isinstance(v, str) and v for v in (mission_id, node_id)):
+        return None, _json_resp(_err("INVALID_ARGS", "mission_id and node_id must be non-empty strings", 400), 400)
+    try:
+        plan = _parse_payload(op_plan.hermes_plan_get(mission_id=mission_id, hermes_root=root))
+    except Exception:  # noqa: BLE001 - fail closed; never echo internals
+        return None, _refuse_approval(tool, "the mission plan could not be read")
+    if plan.get("success") is not True or plan.get("found") is False:
+        return None, _refuse_approval(tool, "no mission plan was found for this mission")
+    node = next(
+        (n for n in (plan.get("nodes") or []) if isinstance(n, dict) and n.get("node_id") == node_id),
+        None,
+    )
+    if node is None:
+        return None, _refuse_approval(tool, "the node is not part of this mission plan")
+    cap = node.get("capability_req") if isinstance(node.get("capability_req"), dict) else {}
+    gated = node.get("kind") == op_plan.KIND_APPROVAL or cap.get("authorization_class") == "high_impact"
+    if not gated:
+        return None, _refuse_approval(tool, "the node is not an approval or high_impact node")
+    version = plan.get("version")
+    if not isinstance(version, int) or isinstance(version, bool):
+        return None, _refuse_approval(tool, "the mission plan version could not be read")
+    node = {**node, "_plan_version": version, "_plan_nodes": plan.get("nodes") or []}
+    return node, None
+
+
+def _precheck_approval_transition(kwargs: dict[str, Any], root: Any, dry_run: bool) -> JSONResponse | None:
+    """Restrict browser ``hermes_plan_node_transition`` to rejecting an approval frontier.
+
+    Browser-only restriction layered on the same tool: the node must be an
+    ``approval`` node or have ``capability_req.authorization_class ==
+    high_impact``, must currently be ``awaiting_approval``, and the target must
+    be ``failed`` (reject). Approve goes through ``hermes_plan_approve_gate``.
+    The browser path also requires Owner Mode (the inbox item's ``requires`` is
+    ``owner``). The plan ``version`` is passed as ``expected_plan_version`` so a
+    plan replaced in between is refused by the tool's own compare-and-swap.
+    """
+    try:
+        op.OperatorPolicy().require_owner(dry_run)
+    except PermissionError as exc:
+        return _json_resp(
+            _err("LEVEL_REQUIRED", op.redact_output(str(exc))[:500], 403,
+                 extra={"required": "owner", "tool": "hermes_plan_node_transition"}),
+            403,
+        )
+    target = kwargs.get("target_state")
+    if target != _APPROVAL_REJECT_TARGET:
+        return _refuse_approval_transition(
+            "target_state must be failed (reject); approve with hermes_plan_approve_gate"
+        )
+    node, refusal = _read_gated_plan_node(kwargs, root, "hermes_plan_node_transition")
+    if refusal is not None or node is None:
+        return refusal
+    # Reject a reached gate from any state the plan state machine lets fail;
+    # Autopilot leaves a reached gate in ``pending``.
+    states = {n.get("node_id"): n.get("state") for n in node["_plan_nodes"] if isinstance(n, dict)}
+    if any(states.get(parent) != "completed" for parent in node.get("parents") or []):
+        return _refuse_approval_transition("the gate has not been reached (a parent is not completed)")
+    if "failed" not in op_plan.NODE_TRANSITIONS.get(str(node.get("state")), ()):
+        return _refuse_approval_transition("the node cannot be rejected from its current state")
+    kwargs["expected_plan_version"] = node["_plan_version"]
+    return None
+
+
+def _precheck_approval_gate(kwargs: dict[str, Any], root: Any, dry_run: bool) -> JSONResponse | None:
+    """Browser precheck for ``hermes_plan_approve_gate`` (Owner Mode, gated node).
+
+    The node must be an approval or high_impact node, on the forward path
+    (``op_plan.GATE_APPROVABLE_STATES``), with every parent completed. The tool
+    re-checks the same conditions and its own CAS; this only refuses early and
+    fixes ``expected_plan_version`` from the plan read here.
+    """
+    try:
+        op.OperatorPolicy().require_owner(dry_run)
+    except PermissionError as exc:
+        return _json_resp(
+            _err("LEVEL_REQUIRED", op.redact_output(str(exc))[:500], 403,
+                 extra={"required": "owner", "tool": "hermes_plan_approve_gate"}),
+            403,
+        )
+    node, refusal = _read_gated_plan_node(kwargs, root, "hermes_plan_approve_gate")
+    if refusal is not None or node is None:
+        return refusal
+    if node.get("state") not in op_plan.GATE_APPROVABLE_STATES:
+        return _refuse_approval("hermes_plan_approve_gate", "the node is not on the forward path to completed")
+    by_id = {n.get("node_id"): n for n in node["_plan_nodes"] if isinstance(n, dict)}
+    if any((by_id.get(parent) or {}).get("state") != "completed" for parent in node.get("parents", [])):
+        return _refuse_approval("hermes_plan_approve_gate", "the node's parents are not completed")
+    kwargs["expected_plan_version"] = node["_plan_version"]
+    return None
+
+
+def _precheck_owner_inbox_ack(kwargs: dict[str, Any], root: Any, dry_run: bool) -> JSONResponse | None:
+    ids = kwargs.get("item_ids")
+    if not isinstance(ids, list) or not 1 <= len(ids) <= _ACK_MAX_IDS:
+        return _json_resp(
+            _err("INVALID_ARGS", f"item_ids must be a list of 1 to {_ACK_MAX_IDS} item ids", 400),
+            400,
+        )
+    return None
+
+
+def _precheck_launch(kwargs: dict[str, Any], root: Any, dry_run: bool) -> JSONResponse | None:
+    if not op_mission._surface_allowed("delegations"):
+        return _json_resp(_err("AUTHZ_DENIED", "Mission launch is not allowed.", 403), 403)
+    try:
+        op_launch._request_digest(kwargs.get("request_id"))
+    except ValueError:
+        return _json_resp(_err("INVALID_REQUEST_ID", "The browser launch requires a stable request id.", 400), 400)
+    return None
+
+
+def _precheck_pending_review(kwargs: dict[str, Any], root: Any, dry_run: bool) -> JSONResponse | None:
+    if "item_id" not in kwargs and "review_revision" not in kwargs:
+        return None  # preserve the existing manually addressed review tool
+    if not op_mission._surface_allowed("approvals"):
+        return _json_resp(_err("AUTHZ_DENIED", "Review is not allowed.", 403), 403)
+    try:
+        item = _pending_review_item(kwargs.pop("item_id", ""), root)
+        revision = kwargs.pop("review_revision", None)
+        if item is None or revision != item["review_revision"]:
+            return _json_resp(_err("REVIEW_STALE", "Refresh the review before confirming.", 409), 409)
+        if str(kwargs.get("reviewer") or "").strip() in item["assignee_identities"]:
+            return _json_resp(_err("REVIEW_SELF_REVIEW", "The reviewer must be distinct from every executing identity.", 400), 400)
+        for key in ("contract_sha256", "task_id", "assignee"):
+            if key in kwargs and kwargs[key] != item[key]:
+                return _json_resp(_err("REVIEW_BINDING_MISMATCH", "Review references do not match the pending item.", 400), 400)
+            kwargs[key] = item[key]
+    except Exception:  # noqa: BLE001 - no raw manifest data in errors
+        return _json_resp(_err("REVIEW_UNAVAILABLE", "Review evidence is unavailable.", 503), 503)
+    return None
 
 
 _MUTATION_TOOLS: dict[str, _MutationSpec] = {
-    "hermes_review_accept": _MutationSpec(
-        op_review.hermes_review_accept,
-        {"contract_sha256", "task_id", "assignee", "reviewer", "verdict", "evidence_refs", "approval_reference", "dry_run", "confirm"},
+    "hermes_mission_launch": _MutationSpec(
+        op_launch.hermes_mission_launch,
+        {"spec_json", "budget_json", "autopilot_limits_json", "request_id", "dry_run", "confirm"},
+        required_level="workspace", confirm_gated=True, precheck=_precheck_launch,
+    ),
+    "hermes_delegation_reconcile": _MutationSpec(
+        op_delegations.hermes_delegation_reconcile, {"delegation_id", "apply"},
+        required_level="workspace", apply_flag=True,
+    ),
+    "hermes_mission_approve": _MutationSpec(
+        op_mission_rt.hermes_mission_approve,
+        {"mission_id", "approval_reference", "confirm", "dry_run"},
         required_level="owner",
         confirm_gated=True,
+    ),
+    "hermes_plan_node_transition": _MutationSpec(
+        op_plan.hermes_plan_node_transition,
+        {"mission_id", "node_id", "target_state", "reason", "confirm", "dry_run"},
+        required_level="owner",
+        confirm_gated=True,
+        precheck=_precheck_approval_transition,
+    ),
+    "hermes_plan_approve_gate": _MutationSpec(
+        op_plan.hermes_plan_approve_gate,
+        {"mission_id", "node_id", "reason", "confirm", "dry_run"},
+        required_level="owner",
+        confirm_gated=True,
+        precheck=_precheck_approval_gate,
+    ),
+    "hermes_autopilot_stop": _MutationSpec(
+        op_autopilot.hermes_autopilot_stop,
+        {"mission_id", "confirm", "dry_run"},
+        required_level="workspace",
+        confirm_gated=True,
+    ),
+    "hermes_owner_inbox_ack": _MutationSpec(
+        op_owner_inbox.hermes_owner_inbox_ack,
+        {"item_ids", "dry_run"},
+        required_level="workspace",
+        precheck=_precheck_owner_inbox_ack,
+    ),
+    "hermes_review_accept": _MutationSpec(
+        op_review.hermes_review_accept,
+        {"contract_sha256", "task_id", "assignee", "reviewer", "verdict", "evidence_refs", "approval_reference", "dry_run", "confirm", "item_id", "review_revision"},
+        required_level="owner",
+        confirm_gated=True,
+        precheck=_precheck_pending_review,
     ),
     "hermes_swarm_stage_advance": _MutationSpec(
         op_swarm.hermes_swarm_stage_advance,
@@ -571,8 +883,38 @@ def _map_mutation_result(tool: str, spec: _MutationSpec, payload: dict[str, Any]
     return _json_resp(_err(code, str(message)[:500], 400, extra={"tool": tool, "details": payload}), 400)
 
 
+def _cross_site_refusal(request: Request) -> JSONResponse | None:
+    """Refuse browser requests that could have been forged by another site.
+
+    Loopback no-auth mode has no credential to protect the action route, so a
+    foreign page could otherwise send a "simple" cross-site POST. A JSON
+    Content-Type cannot be sent cross-site without a CORS preflight, and a
+    browser's Origin / Sec-Fetch-Site headers identify the initiating site.
+    Non-browser clients that send neither header are unaffected.
+    """
+    content_type = request.headers.get("content-type", "").split(";", 1)[0].strip().lower()
+    if content_type != "application/json":
+        return _json_resp(_err("UNSUPPORTED_MEDIA_TYPE", "Content-Type must be application/json", 415), 415)
+    fetch_site = request.headers.get("sec-fetch-site", "").strip().lower()
+    if fetch_site and fetch_site not in {"same-origin", "none"}:
+        return _json_resp(_err("CROSS_SITE_REFUSED", "cross-site action requests are refused", 403), 403)
+    origin = request.headers.get("origin")
+    if origin is not None:
+        host = request.headers.get("host", "").strip().lower()
+        try:
+            origin_host = urlsplit(origin).netloc.lower()
+        except ValueError:
+            origin_host = ""
+        if not host or origin_host != host:
+            return _json_resp(_err("CROSS_SITE_REFUSED", "cross-site action requests are refused", 403), 403)
+    return None
+
+
 async def _action(request: Request) -> JSONResponse:
     """POST /api/ops/action — execute an existing gated hermes_* tool path."""
+    refusal = _cross_site_refusal(request)
+    if refusal is not None:
+        return refusal
     try:
         body = await request.json()
     except Exception:  # noqa: BLE001
@@ -606,6 +948,15 @@ async def _action(request: Request) -> JSONResponse:
             kwargs["dry_run"] = bool(requested_dry_run)
 
     dry_run_effective = _action_effective_dry_run(spec, kwargs)
+
+    if spec.precheck is not None:
+        try:
+            refusal = spec.precheck(kwargs, _resolve_root(), bool(kwargs.get("dry_run", True)))
+        except Exception as exc:  # noqa: BLE001
+            return _json_resp(_err("INTERNAL", f"{tool} precheck failed: {op.redact_output(str(exc))[:300]}"), 500)
+        if refusal is not None:
+            _audit(tool, success=False, summary=f"{tool} refused before execution (dry_run={dry_run_effective})")
+            return refusal
 
     # Long-running tools (hermes_cron_run) block 30-7200s; never hold the
     # HTTP request. Dry-run plans are fast and run inline; real executions
@@ -649,6 +1000,11 @@ def ui_ops_routes() -> list[Route]:
     return [
         Route("/api/events", _events, methods=["GET"]),
         Route("/api/ops/account", _account, methods=["GET"]),
+        Route("/api/ops/owner-inbox", _owner_inbox, methods=["GET"]),
+        Route("/api/ops/launch-receipts/{request_id}", _launch_receipt, methods=["GET"]),
+        Route("/api/ops/pending-review/{item_id}", _pending_review, methods=["GET"]),
+        Route("/api/ops/delivery-status", _delivery_status, methods=["GET"]),
+        Route("/api/ops/agent-readiness", _agent_readiness, methods=["GET"]),
         Route("/api/ops/contracts", _contracts_list, methods=["GET"]),
         Route("/api/ops/contracts/{contract_sha256}", _contracts_detail, methods=["GET"]),
         Route("/api/ops/swarm", _swarm_list, methods=["GET"]),

@@ -25,6 +25,8 @@ Both retain JSON, stateless Streamable HTTP when started with `--http` and
 the existing host/origin restrictions. SDK 2 uses its public app-version
 parameter; only SDK 1 needs the legacy private version assignment.
 
+The real Agent-loader CI matrix checks Hermes Agent `cca83848ec79a4a6a2ecc10285725559bf72c97c` (legacy `_find_all_skills`) and `26874afd73ea4f81c5ac5a5098e222750a337a82` (public `find_all_skills`). It imports those pinned sources with focused loader dependencies, rather than installing a full Agent runtime. A passing loader test establishes these interfaces only; it does not establish full runtime installation, live execution, or compatibility with arbitrary upstream HEAD.
+
 ## Transport matrix
 
 | Transport | Path | Notes |
@@ -39,6 +41,8 @@ Server transport security (`TransportSecuritySettings`) enforces an explicit
 host/origin allowlist: loopback by default plus `HERMES_GPT_ALLOWED_HOSTS`
 extensions and the OAuth issuer when configured. Public unauthenticated
 hosting is unsupported (product invariant).
+
+The unreleased, default-off [Jev bridge](jev.md) adds three tools only when `HERMES_GPT_ENABLE_JEV=1`. It inherits this outer transport/authentication boundary and forwards only the fixed decision calls to a pinned local stdio adapter. It does not mount another endpoint or change the curated Codex surface.
 
 ## Trusted-client authentication metadata
 
@@ -65,8 +69,9 @@ The MCP specification leaves rendering of embedded resources to the client. Herm
 
 The `initialize` handshake advertises the hermes-gpt app version in
 `serverInfo.version` (from `versioning.VERSION`) — not the
-MCP SDK version. This lets a client detect a stale process that is still
-exposing an old schema. `test_mcp_compat.py::test_initialize_advertises_server_version`
+MCP SDK version. This helps detect a stale released version. Unreleased commits can share the
+same version string, so also verify source/artifact provenance and tool discovery
+when testing unreleased features; see [runtime provenance](runtime-checkout.md). `test_mcp_compat.py::test_initialize_advertises_server_version`
 asserts the handshake reports `versioning.VERSION` and that the pinned floor
 (`2024-11-05`) remains negotiable on the running SDK.
 
@@ -91,6 +96,30 @@ Client notes:
   cached tool list. See [docs/updating.md](updating.md) for the check-first
   update and cache-refresh behavior; it is the canonical guide and is not
   duplicated here.
+
+## Connector tool profiles
+
+`HERMES_GPT_TOOL_PROFILE` selects which of the registered connector tools the
+main server advertises. Chat clients with small tool budgets can use a smaller
+surface without changing any tool's behavior.
+
+| Value | Surface |
+| --- | --- |
+| unset or empty (default) | `full`: every registered tool, byte-identical to the unfiltered registration (140 tools in the pinned inventory: finance enabled, all other gates off). |
+| `operator` | `full` minus the raw host primitives `hermes_read_file`, `hermes_write_file`, `hermes_patch`, `hermes_search_files`, `hermes_run_command`, and `hermes_memory`. |
+| `chat-lean` | Read-only status and oversight plus owner decisions, 30 tools with every gate off (v0.16.0; `HERMES_GPT_AUTOPILOT=1` adds the four Autopilot tools). The allowlist is `tool_profiles.CHAT_LEAN_TOOLS`. |
+
+Any other value fails closed: `build_server()` raises a `ValueError` naming
+`HERMES_GPT_TOOL_PROFILE` at startup, and the server does not start.
+
+Profiles never add authority. A profile only skips registrations, so each
+tool keeps its own env gates (for example `HERMES_GPT_AUTOPILOT=1` or
+`HERMES_GPT_ENABLE_SESSION_SEARCH=1`), its per-call confirm and dry-run checks,
+and the Operator and Owner policy that already applies. `chat-lean` is not
+read-only by policy: it still lists `hermes_mission_create`, `hermes_mission_approve`,
+and `hermes_review_accept`, which keep their existing gates. The authoritative
+inventory is pinned in `test_tool_inventory.py`, and `test_tool_profiles.py`
+covers the profile rules.
 
 ## Package floor and regression coverage
 
@@ -124,4 +153,5 @@ python -m venv .venv-sdk2 && .venv-sdk2/bin/pip install -e ".[dev]" "mcp>=2,<3"
 ```
 
 Swap the specifier for `"mcp>=1.28.1,<2"` to check SDK 1. Two runs cover the
-compatibility surface; the suite takes roughly a minute per run.
+compatibility surface. Duration depends on platform and enabled integration tests;
+Windows process/regression checks can take several minutes.

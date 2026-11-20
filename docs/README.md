@@ -16,17 +16,24 @@ A design document describes intended architecture. It does not override implemen
 
 ## Current version context
 
-Repository version: **0.14.0**. The GitHub release target is `v0.14.0`; verify the public GitHub Releases and PyPI channels independently. Declared artifact size/digest checks and validation recovery require v0.14.0 or newer.
+Repository version: **0.18.0**. Check [GitHub releases](https://github.com/asimons81/hermes-gpt/releases) and [PyPI versions](https://pypi.org/project/hermes-gpt/#history) independently before installation. Publication does not establish the version or acceptance of a running installation. See [0.18.0 release notes](release-notes-v0.18.0.md) and [runtime provenance](runtime-checkout.md).
+
+Unreleased changes on `master` can retain the same package version. The Jev bridge, owner inbox and review assist ship in 0.15.0 but are default off, or read-only where noted; the version string alone does not prove a feature is installed or active. Verify the artifact/source revision and tool inventory using [runtime provenance](runtime-checkout.md).
 
 PyPI is an independent distribution channel. Check the PyPI badge in the root README before assuming `pip install hermes-gpt` contains a particular feature set; v0.13 Autopilot requires a published PyPI version of 0.13.0 or newer *and* `HERMES_GPT_AUTOPILOT=1`; v0.12 gated budget-enforcement and controller-L2 behavior requires a published PyPI version of 0.12.0 or newer *and* the corresponding machine gates armed; v0.11 Gemini Spark / Bot Chat / SDK 2 behavior requires a published PyPI version of 0.11.0 or newer; v0.10 vNext derived views / controller surfaces and v0.9 Mission/delegation/live-event behavior require 0.10.0 (or 0.9.0) or newer, respectively.
+
+The [public Docs hub](https://hermes-gpt.tonysimons.dev/docs.html) links to these canonical guides.
 
 ## Current operational docs
 
 | Document | Authority | Use it for |
 | --- | --- | --- |
 | [`../README.md`](../README.md) | current | project overview, current release, quickstart, safety invariants, entry-point selection |
-| [`runtime-checkout.md`](runtime-checkout.md) | host deployment provenance | which checkout the live `hermes-gpt-server.service` serves, and a caution that it is not the branch you happened to inspect |
+| [`runtime-checkout.md`](runtime-checkout.md) | current | verify running-service provenance, installation isolation and acceptance separately from source/package state |
 | [`oauth.md`](oauth.md) | current | static bearer and confidential-client OAuth configuration, token lifecycle, refresh rotation, and remote authentication limits |
+| [`vnext-capability-manifest-and-mission-ledger.md`](vnext-capability-manifest-and-mission-ledger.md) | current | read-only capability and per-mission ledger views |
+| [`jev.md`](jev.md) | current (v0.15.0) | default-off typed Jev decisions through the pinned external MCP adapter; owner setup and unchanged authority boundaries |
+| [`review-assist.md`](review-assist.md) | current (v0.15.0) | default-off advisory Jev scoring of Work Contract state; text sent to TypeSafe, separate advisory store, never evidence or acceptance |
 | [`gemini-spark.md`](gemini-spark.md) | current | opt-in Gemini Spark client profile: dedicated-instance or additional-client setup, exact callback discovery, verification, and rollback |
 | [`mcp-compatibility.md`](mcp-compatibility.md) | current | SDK 1/2 support, protocol regression checks, transport matrix, trusted-client auth metadata |
 | [`file-export.md`](file-export.md) | current | bounded binary file transfer, workspace/denied-path gates, size/extension limits, MCP embedded-resource semantics |
@@ -34,8 +41,12 @@ PyPI is an independent distribution channel. Check the PyPI badge in the root RE
 | [`cloudflare-tunnel.md`](cloudflare-tunnel.md) | current | public Cloudflare HTTPS proxy deployment and Host allowlist behavior |
 | [`operator-mode.md`](operator-mode.md) | current | Operator / Owner policy, Mission Control, fleet routing, Work Contracts, Swarm Orchestration, v0.8 Fabric execution, and Flight Deck surfaces |
 | [`finance.md`](finance.md) | current | bounded ChatGPT-to-Hermes Finance bridge, finance evidence/decision contracts, persistence boundary, activation, and verification |
+| [`agent-readiness.md`](agent-readiness.md) | current (v0.18.0) | passive Agent source/CLI observations, static declarations, prior session preflights, skill-loader compatibility and limitations |
+| [`daily-operations.md`](daily-operations.md) | current (v0.17.0) | guided launch, durable receipt recovery, review workbench, read-only delivery status |
 | [`missions.md`](missions.md) | current | v0.9 first-class Mission lifecycle, bounded context/skills manifests, attachments, reconciliation, and Owner approval |
-| [`autopilot.md`](autopilot.md) | current | v0.13 Autopilot: gates, tools, limits, the durable worker, approval frontier, recovery, budget interplay, status summary |
+| [`autopilot.md`](autopilot.md) | current | v0.14 Autopilot: gates, declared artifact acceptance, delivery grace, bounded recovery, approval frontier, budgets, and status |
+| [`owner-inbox.md`](owner-inbox.md) | current (v0.15.0; acknowledgements and Flight Deck actions in v0.16.0) | Owner inbox: Missions awaiting approval, Autopilot waiting for Owner, controller attention, Work Contracts awaiting review acceptance, source health (`complete`), stable item ids, acknowledgements; gated actions only |
+| [`attention-delivery.md`](attention-delivery.md) | current (v0.16.0, default off) | notification-only relay of new Owner inbox items to Hermes or iMessage targets; administrator env config, delivery state, safety boundary |
 | [`live-events.md`](live-events.md) | current | v0.9 durable event cursor/long-poll and authenticated WebSocket wake-up stream |
 | [`flight-deck-missions.md`](flight-deck-missions.md) | current | v0.9 read-only Mission/delegation Flight Deck views with durable live refresh |
 | [`delegations.md`](delegations.md) | current | v0.9 normalized delegation lifecycle across Pi/OpenCode/Codex/Fabric with durable lineage and reconciliation |
@@ -47,7 +58,11 @@ PyPI is an independent distribution channel. Check the PyPI badge in the root RE
 | [`session-control.md`](session-control.md) | current | gated asynchronous session continue/send jobs |
 | [`ui-security-boundary.md`](ui-security-boundary.md) | current | conversational UI browser security boundary and opt-in UI mount |
 | [`flight-deck-coverage.md`](flight-deck-coverage.md) | current | Flight Deck browser coverage and mutation safety decisions |
-| [`release-notes-v0.14.0.md`](release-notes-v0.14.0.md) | current release record | declared acceptance checks, durable delivery grace, bounded artifact-failure recovery, and supervision |
+| [`release-notes-v0.18.0.md`](release-notes-v0.18.0.md) | current release record; verify publication per channel | Agent readiness and modern/legacy skill-loader compatibility |
+| [`release-notes-v0.17.0.md`](release-notes-v0.17.0.md) | historical release record | guided launch, receipts, review and delivery status |
+| [`release-notes-v0.16.0.md`](release-notes-v0.16.0.md) | historical release record | v0.16 Close the Loop: attention delivery relay, Owner inbox review source and acknowledgements, Flight Deck inbox actions, action-route cross-site refusal, one-call Mission launch, safe package upgrade |
+| [`release-notes-v0.15.0.md`](release-notes-v0.15.0.md) | historical release record | v0.15 Owner Loop: owner inbox, advisory review assist, Jev bridge, connector tool profiles, file-backup switch |
+| [`release-notes-v0.14.0.md`](release-notes-v0.14.0.md) | historical release record | declared acceptance checks, durable delivery grace, bounded artifact-failure recovery, and supervision |
 | [`release-notes-v0.13.0.md`](release-notes-v0.13.0.md) | historical release record | v0.13 Autopilot behavior and initial release verification |
 | [`release-notes-v0.8.0.md`](release-notes-v0.8.0.md) | historical release record | shipped v0.8 Fabric behavior, G6 acceptance boundary, and known limitation |
 | [`release-notes-v0.7.0.md`](release-notes-v0.7.0.md) | historical release record | shipped v0.7 behavior and gates |
@@ -110,8 +125,8 @@ These are version records, not current setup instructions:
 
 The following directories contain valuable provenance, but they are not operational source-of-truth documents:
 
-- `design/` - technical design documents written before or during implementation. v0.6 designs are historical; v0.7 Flight Deck architecture and ADRs are current design artifacts for the v0.7 release cycle.
-- `releases/` - release brief, integrated plan, risk reviews, counsel packet, and surface manifest created during pre-release work. v0.6 artifacts are historical; v0.7 Flight Deck research package, risk register, and implementation plan are current release-program artifacts.
+- `design/` - technical design documents written before or during implementation. v0.6 designs are historical; v0.7 Flight Deck architecture and ADRs are also historical release-cycle records.
+- `releases/` - release brief, integrated plan, risk reviews, counsel packet, and surface manifest created during pre-release work. v0.6 artifacts are historical; v0.7 Flight Deck research package, risk register, and implementation plan are also historical release-program records.
 
 Some of these files intentionally preserve phrases such as "candidate", "gate", or "before release" because they record the state at the time they were written. Agents must not treat those historical status statements as the current release state.
 

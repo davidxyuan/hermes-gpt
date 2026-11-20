@@ -3,20 +3,21 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Hermes GPT v0.13.0 source | Autopilot for Hermes Agent</title>
-  <meta name="description" content="Explore the Hermes GPT v0.13.0 Autopilot source candidate: a durable, default-off Mission scheduler with bounded parallel work and human approval frontiers. Public release and PyPI remain v0.12.0.">
+  <title>Hermes GPT v0.18.0 | Agent readiness</title>
+  <meta name="description" content="Hermes GPT v0.18.0: inspect Agent readiness and use modern or legacy skill loaders with existing authority gates. Verify GitHub and PyPI independently; live runtime acceptance is separate.">
   <meta name="theme-color" content="#030303">
-  <meta property="og:title" content="Hermes GPT v0.13.0 source | Autopilot">
-  <meta property="og:description" content="The v0.13.0 Autopilot source candidate is merged, but not released. GitHub Releases and PyPI remain at v0.12.0.">
-  <meta property="og:image" content="https://hermesgpt.tonysimons.dev/assets/hermes-gpt-v0.13.0-readme-hero.jpg">
+  <meta property="og:title" content="Hermes GPT v0.18.0 | Agent readiness">
+  <meta property="og:description" content="Hermes GPT v0.18.0: inspect Agent readiness and use modern or legacy skill loaders with existing authority gates. Verify GitHub and PyPI independently; live runtime acceptance is separate.">
+  <meta property="og:image" content="https://hermes-gpt.tonysimons.dev/assets/hermes-gpt-branding.jpg">
   <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Hermes GPT v0.13.0 source | Autopilot">
-  <meta name="twitter:description" content="Merged v0.13.0 Autopilot source candidate; not yet released. Public GitHub and PyPI artifacts remain v0.12.0.">
-  <meta name="twitter:image" content="https://hermesgpt.tonysimons.dev/assets/hermes-gpt-v0.13.0-readme-hero.jpg">
+  <meta name="twitter:title" content="Hermes GPT v0.18.0 | Agent readiness">
+  <meta name="twitter:description" content="Hermes GPT v0.18.0: inspect Agent readiness and use modern or legacy skill loaders with existing authority gates. Verify GitHub and PyPI independently; live runtime acceptance is separate.">
+  <meta name="twitter:image" content="https://hermes-gpt.tonysimons.dev/assets/hermes-gpt-branding.jpg">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="./styles.css">
+  <link rel="canonical" href="https://hermes-gpt.tonysimons.dev/">
 </head>
 <body>
   <div class="toast" role="alert" aria-live="polite"></div>
@@ -24,51 +25,61 @@
     <header class="topbar reveal">
       <a class="brand" href="#top" aria-label="Hermes GPT Home">
         <span class="brand-mark" aria-hidden="true">HG</span>
-        <span class="brand-copy"><strong>Hermes GPT</strong><small>v0.13.0 source</small></span>
+        <span class="brand-copy"><strong>Hermes GPT</strong><small>v0.18.0</small></span>
       </a>
       <nav class="topnav" aria-label="Primary navigation">
-        <a href="#vnext">vNext</a><a href="#how-it-works">How it works</a><a href="#simulator">Simulator</a><a href="#features">Features</a><a href="#install">Install</a>
+        <a href="#vnext">v0.18</a><a href="#how-it-works">How it works</a><a href="#simulator">Simulator</a><a href="#features">Features</a><a href="#install">Install</a><a href="./docs.html">Docs</a>
       </nav>
       <a class="ghost-link" href="https://github.com/asimons81/hermes-gpt" rel="noreferrer noopener" target="_blank">GitHub</a>
     </header>
 
     <section class="hero section-pad reveal">
       <div class="hero-copy">
-        <p class="eyebrow">v0.13.0 source candidate &bull; Local-first &bull; Autopilot default off</p>
-        <h1>One Mission, <span>run to its approval frontier.</span></h1>
-        <p class="lede">The merged v0.13.0 source adds Autopilot: a durable worker that schedules MissionPlan nodes across capable peers, runs independent work in parallel, verifies observed results, and retries or replans within hard bounds. It stops at approval boundaries and adds no authority. This is source, not a release: GitHub Releases and PyPI remain at v0.12.0.</p>
+        <p class="eyebrow">v0.18.0 &bull; Local-first &bull; Autopilot default off</p>
+        <h1>Know your Agent. <span>Keep control.</span></h1>
+        <p class="lede">Inspect Agent source and CLI locations, static protocol declarations, and prior session preflights in Flight Deck. Use current and legacy skill loaders. Keep guided Mission launch, recoverable receipts and exact evidence review, with final approval in human hands.</p>
         <div class="cta-row">
-          <a class="button button-primary" href="#install"><span>Install released v0.12.0</span><span class="btn-arrow" aria-hidden="true">→</span></a>
-          <a class="button button-secondary" href="https://github.com/asimons81/hermes-gpt/releases/tag/v0.12.0" rel="noreferrer noopener" target="_blank">Latest public release (v0.12.0)</a>
+          <a class="button button-primary" href="#install"><span>Install v0.18.0</span><span class="btn-arrow" aria-hidden="true">→</span></a>
+          <a class="button button-secondary" href="https://github.com/asimons81/hermes-gpt/releases/tag/v0.18.0" rel="noreferrer noopener" target="_blank">Release notes (v0.18.0)</a>
         </div>
         <div class="hero-metrics">
-          <div class="metric-card"><span>Scheduling</span><strong>Bounded parallel work</strong><small>Ready MissionPlan nodes run concurrently within the configured limit, using existing placement, Work Contract, and delegation surfaces.</small></div>
-          <div class="metric-card"><span>Recovery</span><strong>Evidence-led</strong><small>Completion requires validated observed state. Transient retries and semantic replans are bounded; other failures stop for a human.</small></div>
-          <div class="metric-card"><span>Authority</span><strong>Default off</strong><small>Autopilot cannot approve or complete Missions and never dispatches beyond owner approval or budget boundaries.</small></div>
+          <div class="metric-card"><span>Notifications</span><strong>Default off</strong><small>New inbox items are relayed only when HERMES_GPT_ATTENTION_DELIVERY=1 is set. A message says what waits and never carries an approval or a command.</small></div>
+          <div class="metric-card"><span>Flight Deck</span><strong>Same gates</strong><small>Each inbox action is a dry run, then a confirm, through the existing gated tool. Acknowledging an item does not resolve it.</small></div>
+          <div class="metric-card"><span>Authority</span><strong>Unchanged</strong><small>Mission launch is dry run by default and never approves. Autopilot stays default off and cannot approve or complete Missions.</small></div>
         </div>
       </div>
       <div class="hero-visual reveal">
         <div class="double-bezel-outer"><div class="double-bezel-inner"><figure class="brand-image-wrapper">
-          <img src="./assets/hermes-gpt-v0.13.0-readme-hero.jpg" alt="Hermes GPT v0.13.0 Autopilot source candidate: a futuristic Hermes operator beside panels describing bounded Mission scheduling and human approval boundaries">
+          <img src="./assets/hermes-gpt-branding.jpg" alt="Hermes GPT — MCP sidecar for Hermes Agent">
         </figure></div></div>
       </div>
     </section>
 
     <section class="section reveal" id="vnext">
-      <div class="section-head"><p class="eyebrow">v0.13.0 source candidate</p><h2>Durable orchestration. Human approval stays in control.</h2><p>Autopilot schedules MissionPlan work through existing authority surfaces, with bounded concurrency and recovery. It is default off, never approves or completes a Mission, and stops at every approval frontier. v0.13.0 is not yet publicly released.</p></div>
+      <div class="section-head"><p class="eyebrow">What v0.18.0 adds</p><h2>Inspect before you depend on it.</h2><p>Read-only Agent observations and compatibility with both skill-loader APIs. Source identity, CLI selection and static protocol declarations stay distinct from live acceptance. Existing mutation gates and the 139-tool neutral MCP surface remain unchanged (140 with Finance).</p></div>
       <div class="bento-grid">
+        <article class="bento-card"><h3>Agent readiness</h3><p>Inspect server source and CLI locations, static declarations, and prior session preflights. Missing and uncertain results stay visible. No Agent code runs. <a href="https://github.com/asimons81/hermes-gpt/blob/master/docs/agent-readiness.md">Read the guide</a>.</p></article>
+        <article class="bento-card"><h3>Current and legacy Agent loaders</h3><p>Skill validation supports both discovery APIs while preserving profile-scoped explicit loading, disabled preprocessing and fail-closed admission.</p></article>
+        <article class="bento-card"><h3>Guided Mission launch</h3><p>Set an objective, acceptance criteria, profile, budget posture and bounded runtime. Preview, then confirm through the existing Autopilot and Operator gates.</p></article>
+        <article class="bento-card"><h3>Recover the original attempt</h3><p>A stable request id reserves one launch before effects. After a disconnect, inspect its receipt. Partial or unknown work is never automatically redispatched.</p></article>
+        <article class="bento-card"><h3>Review exact evidence</h3><p>Open pending reviews from the Owner inbox with full contract and task references. Stale bindings and executing reviewers are refused. Reconciliation and final approval stay separate.</p></article>
+        <article class="bento-card"><h3>Inspect delivery health</h3><p>See masked targets, pending work, backoff and unverified sends. This page never sends or resends. Agent readiness is inspected on its separate page. <a href="https://github.com/asimons81/hermes-gpt/blob/master/docs/daily-operations.md">Daily Operations guide</a>.</p></article>
         <article class="bento-card col-span-2"><span class="card-num">01</span><h3>MissionPlan Decomposition</h3><p><code>hermes_plan_create/get/list/validate/decompose/review/node_transition/set_status</code>: a deterministic, bounded decomposition DAG over a MissionSpec. Plan mutations touch only the isolated plan store and are read-only with respect to the Mission lifecycle.</p></article>
         <article class="bento-card"><span class="card-num">02</span><h3>Capability Manifest + Mission Ledger</h3><p><code>hermes_capability_manifest</code> folds the Fabric node registry, Fleet authority manifest, profile toolsets/skills, and provider manifests into one queryable index. <code>hermes_mission_ledger</code> is a merged, replayable, cursor-paginated event timeline. No mutation path exists.</p></article>
         <article class="bento-card"><span class="card-num">03</span><h3>Budget Envelope + Gated Hard-Block</h3><p><code>hermes_budget_set/get/check/record</code>: a per-mission spend envelope with a read-only <code>budget_check</code> evaluation surface. v0.12 adds the gated D3 enforcement rung: when the flags are armed, a crossing pauses the Mission through the existing transition, spools one fleet-attention interrupt, and records one <code>budget_events</code> break row.</p></article>
         <article class="bento-card col-span-2"><span class="card-num">04</span><h3>Placement Scoring</h3><p><code>hermes_placement_score/candidates/get/list</code>: deterministic hard filters then soft scores over the derived capability index. Scoring is unchanged and still decision-only; <code>would_assign</code> is true only for a dispatch that actually happened under the v0.12 L2 gates, and real dispatch stays on the existing contract, fleet, and delegation authority surfaces.</p></article>
         <article class="bento-card col-span-3"><span class="card-num">05</span><h3>Failure Semantics + Recovery Matrix</h3><p>An 8-class taxonomy classifies an authoritative observation envelope and proposes the deterministic smallest-first recovery action, recorded on a <code>controller_plan</code> row. That classification surface stays decision-only; executing the proposed action is the separate, default-off v0.12 L2 rung.</p></article>
-        <article class="bento-card col-span-3"><span class="card-num">06</span><h3>Autopilot (v0.13 source)</h3><p>A durable, default-off Mission worker schedules ready nodes through existing placement, Work Contract, and delegation authority; independent nodes can run in parallel. It validates observed evidence, applies bounded retries/replans, checks budgets before dispatch, and stops at owner approval boundaries. It does not approve or complete Missions.</p></article>
+        <article class="bento-card col-span-3"><span class="card-num">06</span><h3>Autopilot + Acceptance (v0.14)</h3><p>A durable, default-off Mission worker schedules ready nodes through existing authority surfaces. v0.14 carries declared minimum/maximum artifact sizes and optional SHA-256 values into immutable Work Contracts. Rework preserves the requirements; final Mission approval remains Owner-only.</p></article>
       </div>
     </section>
 
     <section class="section reveal" id="how-it-works">
       <div class="section-head"><p class="eyebrow">System Architecture</p><h2>Schedule, observe, validate. Stop at approval.</h2><p>Autopilot advances ready MissionPlan nodes through existing authority surfaces, then reconciles against durable observed state. It does not bypass Work Contracts, budgets, or owner approval.</p></div>
       <div class="timeline-container">
+        <div class="timeline-step"><span class="step-num">v0.17.0</span><strong>Daily Operations</strong><p>Guided launch, durable receipt recovery, exact contract review and read-only delivery inspection. Human approval remains separate from execution and evidence validation.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.16.0</span><strong>Close the loop</strong><p>Default-off Owner inbox notifications through Hermes-configured platforms and iMessage, stable inbox item ids with acknowledgements, Flight Deck actions through the same gated tools, one-call Mission launch behind the Autopilot gate, and a safe package upgrade. No new authority; Owner-only final approval is unchanged.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.15.0</span><strong>Owner loop</strong><p>Read-only <code>hermes_owner_inbox</code> across Missions, Autopilot, and controller attention; advisory <code>hermes_review_assess</code> behind Jev and review-assist gates, never evidence; <code>HERMES_GPT_TOOL_PROFILE</code> with <code>chat-lean</code>; and explicit-off file-backup configuration. 138 tools by default. Owner-only final approval is unchanged.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.14.0</span><strong>Acceptance and recovery</strong><p>Declared artifact size/digest checks, durable 30-second delivery grace, bounded recovery after confirmed artifact failures, and clear completion evidence in Flight Deck. Requirements survive rework unchanged. No new tools or authority; final Mission approval remains Owner-only.</p></div>
         <div class="timeline-step"><span class="step-num">01</span><strong>Client Request</strong><p>ChatGPT, Codex, Cursor, Claude Desktop, or another trusted MCP client submits a bounded request to Hermes GPT.</p></div>
         <div class="timeline-step"><span class="step-num">02</span><strong>Observe</strong><p>The controller observes authoritative mission, plan, delegation, and runner state through the derived capability manifest and mission ledger.</p></div>
         <div class="timeline-step"><span class="step-num">03</span><strong>Schedule + Validate</strong><p>Ready nodes are dispatched within configured concurrency. Delegation reconciliation reads runner and Fabric records; Work Contract evidence must validate against observed state before a node completes.</p></div>
@@ -95,11 +106,11 @@
       <div class="section-head"><p class="eyebrow">Capabilities</p><h2>Local-first control plane, now supervised.</h2><p>vNext adds the controller layer without weakening the security and evidence invariants shipped in v0.6 through v0.9.</p></div>
       <div class="bento-grid">
         <article class="bento-card col-span-2"><span class="card-num">01</span><h3>Operator and Owner Policy</h3><p>Tiered authority from <code>read_only</code> through <code>owner</code>, with explicit direct mode, confirmation gates, and dry-run-first mutation.</p></article>
-        <article class="bento-card"><span class="card-num">02</span><h3>Work Contracts</h3><p>Completion is validated from observed state. Missing required evidence cannot become <code>SATISFIED</code>.</p></article>
+        <article class="bento-card"><span class="card-num">02</span><h3>Work Contracts</h3><p>Completion is validated from observed state, including declared artifact sizes and optional expected digests. Changing or unreadable evidence remains unverified. Size and integrity checks do not replace semantic review.</p></article>
         <article class="bento-card"><span class="card-num">03</span><h3>Missions, Delegations + Live Events</h3><p>v0.9 adds the first-class durable Mission runtime with Owner-gated final approval, unified delegation lineage, a durable event bus with a WebSocket stream, and runner-neutral job supervision.</p></article>
         <article class="bento-card col-span-2"><span class="card-num">04</span><h3>Fabric Cross-Machine Execution</h3><p>v0.8 Fabric: authenticated peers, capability-aware <code>auto</code> routing, hash-verified remote evidence and artifacts, and same-attempt reconciliation — with the coordinator authoritative.</p></article>
         <article class="bento-card col-span-3"><span class="card-num">05</span><h3>OpenAI Secure MCP Tunnel + Bounded Export</h3><p>Supported OpenAI products reach loopback Hermes GPT through an outbound-only private tunnel path, and <code>hermes_export_file</code> provides workspace-authorized binary transfer with denied-path enforcement and size caps.</p></article>
-        <article class="bento-card col-span-3"><span class="card-num">06</span><h3>Flight Deck + Connector Gate</h3><p>Mission Control, event history, review evidence, diagnostics, recovery tools, and Fabric routing views keep long-running autonomy inspectable. The v0.12.0 public connector surface has 137 tools; v0.13 Autopilot source registers three additional tools only when its machine gate is enabled.</p></article>
+        <article class="bento-card col-span-3"><span class="card-num">06</span><h3>Flight Deck + Connector Gate</h3><p>Mission Control, event history, review evidence, diagnostics, recovery tools, and Fabric routing views keep long-running autonomy inspectable. v0.16 registers 138 tools with every optional gate unset (139 on the connector acceptance surface with finance enabled). Autopilot adds 4, attention delivery adds 1, Jev adds 3, and review assist adds 1 more when both of its gates are set.</p></article>
       </div>
     </section>
 
@@ -108,21 +119,26 @@
       <div class="install-shell double-bezel-outer"><div class="double-bezel-inner">
         <div class="tabs" role="tablist"><div class="tab-glider" id="tab-glider-install"></div><button class="tab-btn-install is-active" data-tab="pypi" type="button" aria-selected="true">PyPI</button><button class="tab-btn-install" data-tab="source" type="button" aria-selected="false">Source</button><button class="tab-btn-install" data-tab="http" type="button" aria-selected="false">Local HTTP</button></div>
         <div class="tab-panels">
-          <div class="tab-panel is-active" data-panel="pypi"><div class="code-head"><span>Install latest public version</span><button data-copy-target="code-pypi" type="button">Copy</button></div><pre><code id="code-pypi">python -m pip install hermes-gpt==0.12.0</code></pre><p>PyPI's latest published version is v0.12.0. This does not include v0.13 Autopilot.</p></div>
+          <div class="tab-panel is-active" data-panel="pypi"><div class="code-head"><span>Install this version</span><button data-copy-target="code-pypi" type="button">Copy</button></div><pre><code id="code-pypi">python -m pip install hermes-gpt==0.18.0</code></pre><p>Agent readiness requires 0.18.0 or newer; guided launch, keyed receipts and the review workbench require 0.17.0 or newer. Verify availability on GitHub and PyPI independently before installing. Autopilot requires <code>HERMES_GPT_AUTOPILOT=1</code> and the normal Operator policy gates. <a href="./docs.html">Read the setup guides</a>.</p></div>
           <div class="tab-panel" data-panel="source" hidden><div class="code-head"><span>Run current source</span><button data-copy-target="code-source" type="button">Copy</button></div><pre><code id="code-source">git clone https://github.com/asimons81/hermes-gpt.git
 cd hermes-gpt
 python -m pip install .
 hermes-gpt</code></pre></div>
-          <div class="tab-panel" data-panel="http" hidden><div class="code-head"><span>Loopback Streamable HTTP</span><button data-copy-target="code-http" type="button">Copy</button></div><pre><code id="code-http">python server.py --http --host 127.0.0.1 --port 7677</code></pre><p>Endpoint: <code>http://127.0.0.1:7677/mcp</code>. For supported OpenAI products, prefer the OpenAI Secure MCP Tunnel path documented in the repository.</p></div>
+          <div class="tab-panel" data-panel="http" hidden><div class="code-head"><span>Loopback Streamable HTTP</span><button data-copy-target="code-http" type="button">Copy</button></div><pre><code id="code-http">hermes-gpt --http --host 127.0.0.1 --port 7677</code></pre><p>Endpoint: <code>http://127.0.0.1:7677/mcp</code>. For supported OpenAI products, prefer the OpenAI Secure MCP Tunnel path documented in the repository.</p></div>
         </div>
       </div></div>
     </section>
 
     <section class="section reveal" id="changelog">
-      <div class="section-head"><p class="eyebrow">Changelog</p><h2>Source and release history.</h2><p>v0.13.0 Autopilot is merged source, not a public release. The latest GitHub release and PyPI version are v0.12.0.</p></div>
+      <div class="section-head"><p class="eyebrow">Changelog</p><h2>Source and release history.</h2><p>Source tags and published artifacts can differ. Verify GitHub and PyPI independently when updating.</p></div>
       <div class="timeline-container">
-        <div class="timeline-step"><span class="step-num">v0.13.0 source</span><strong>Autopilot — unreleased candidate</strong><p>Merged source adds a durable, default-off Mission scheduler with bounded parallel node execution, observed-state validation, bounded retries and replans, budget checks, and owner approval frontiers. It uses existing authority surfaces and cannot approve or complete a Mission. No v0.13.0 tag, GitHub release, or PyPI upload is available; do not install this version from public artifacts.</p></div>
-        <div class="timeline-step"><span class="step-num">v0.12.0</span><strong>Latest public release: Gated Budget Hard-Block + Controller L2</strong><p>vNext slice 2: budget D3 hard-block enforcement (pause through the existing transition, one fleet-attention interrupt for the delivery broker, one <code>budget_events</code> break row) and the controller L2 rung (at most one smallest recovery action per pass, dispatched through the existing authority surfaces, intent recorded before dispatch). Both are default-off behind per-call confirm plus a machine gate, direct-mode Operator policy, and per-mission flags — and byte-identical to v0.11.0 while unarmed. 137 tools; no new mutating surface by default.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.18.0</span><strong>Agent readiness and compatibility</strong><p>Passive source and CLI observations, static declarations and prior session preflights, bounded help probes and modern/legacy skill-loader support. 139 tools with every optional gate unset; live acceptance remains separate.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.17.0</span><strong>Daily Operations</strong><p>Guided Mission launch, recoverable receipts, exact evidence review and read-only delivery health.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.16.0</span><strong>Close the loop</strong><p>Owner inbox notifications (default off) through Hermes and iMessage, inbox acknowledgements and Flight Deck actions, a one-call Mission launch (Autopilot-gated, dry run first), and safe package upgrades. Every new mutating path keeps its existing gates. 138 tools with every optional gate unset.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.15.0</span><strong>Owner loop</strong><p>Read-only Owner inbox, advisory review assist (default off, never evidence), connector tool profiles (<code>full</code>, <code>operator</code>, <code>chat-lean</code>), and explicit-off file backups. Every mutating path keeps its existing gates.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.14.0</span><strong>Acceptance and recovery</strong><p>Declared artifact size and SHA-256 checks carried by immutable Work Contracts, a durable 30-second delivery grace, bounded recovery after confirmed artifact failures, and Flight Deck completion evidence. Autopilot remains default off.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.13.0</span><strong>Autopilot</strong><p>A durable, default-off Mission scheduler with bounded parallel execution, observed-state validation, retries and replans, budget checks, and Owner approval frontiers. Autopilot uses existing authority surfaces and cannot approve or complete a Mission.</p></div>
+        <div class="timeline-step"><span class="step-num">v0.12.0</span><strong>Gated Budget Hard-Block + Controller L2</strong><p>vNext slice 2: budget D3 hard-block enforcement (pause through the existing transition, one fleet-attention interrupt for the delivery broker, one <code>budget_events</code> break row) and the controller L2 rung (at most one smallest recovery action per pass, dispatched through the existing authority surfaces, intent recorded before dispatch). Both are default-off behind per-call confirm plus a machine gate, direct-mode Operator policy, and per-mission flags — and byte-identical to v0.11.0 while unarmed. 137 tools; no new mutating surface by default.</p></div>
         <div class="timeline-step"><span class="step-num">v0.11.0</span><strong>Gemini Spark + MCP SDK 2 + Bot Chat</strong><p>Opt-in Gemini Spark custom-app client profile (verified end-to-end), MCP Python SDK 2.x support with SDK 1 retained, profile-aware Bot Chat and session delivery, fleet loopback Agent Cards, and the post-v0.10 security remediation. 137 tools; no new mutating surface by default.</p></div>
         <div class="timeline-step"><span class="step-num">v0.10.0</span><strong>vNext — Supervised Mission Controller</strong><p>MissionPlan decomposition DAGs, read-only capability-manifest and mission-ledger views, a dry-run budget envelope, placement scoring, an 8-class failure taxonomy with recovery matrix, and a shadow/observe controller with GREEN/YELLOW/RED telemetry. 27 new tools (137 total); none can mutate a Mission, dispatch, or approve.</p></div>
         <div class="timeline-step"><span class="step-num">v0.9.0</span><strong>Missions + Delegations + Live Events</strong><p>First-class durable Missions with Owner-gated final approval, unified delegation lineage across runners, a durable live-event bus with WebSocket stream, runner-neutral job supervision, and the bounded Finance bridge.</p></div>
@@ -133,7 +149,7 @@ hermes-gpt</code></pre></div>
       </div>
     </section>
 
-    <footer class="footer reveal"><div><strong>HG Hermes GPT</strong><p>A local-first project by Tony Simons. Built with FastMCP.</p></div><div><span>© <span id="footer-year">2026</span> Tony Simons.</span> <a href="https://github.com/asimons81/hermes-gpt" target="_blank" rel="noreferrer noopener">GitHub</a> <a href="#top">Back to top</a></div></footer>
+    <footer class="footer reveal"><div><strong>HG Hermes GPT</strong><p>A local-first project by Tony Simons. Built with FastMCP.</p></div><div><span>© <span id="footer-year">2026</span> Tony Simons.</span> <a href="https://github.com/asimons81/hermes-gpt" target="_blank" rel="noreferrer noopener">GitHub</a> <a href="./docs.html">Docs</a> <a href="#top">Back to top</a></div></footer>
   </main>
   <script src="./app.js"></script>
 </body>
