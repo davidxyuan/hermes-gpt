@@ -306,7 +306,13 @@ def test_real_pinned_agent_source_declaration_without_import_or_execution(monkey
     monkeypatch.setattr(readiness.subprocess, "Popen", lambda *args, **kwargs: pytest.fail("static interface inspection must not execute Agent code"))
     result = readiness.source_protocol(root)
     assert result["state"] == "declared", result
-    assert result["parser_sha256"] in {
-        "5b3f30a1e48799d563fdceec337c31c49f395242b80742ef15f6799e47e83cb3",
-        "75fa3070d9cdcbeaa3fc1424e9c3dba06a403b9d43c74aaccc3b82829edf366c",
+    legacy_parser = "75fa3070d9cdcbeaa3fc1424e9c3dba06a403b9d43c74aaccc3b82829edf366c"
+    expected_by_revision = {
+        "cca83848ec79a4a6a2ecc10285725559bf72c97c": legacy_parser,
+        "d923a5eb487a17c0a68801bba9ef0f56c81040a8": legacy_parser,
+        "26874afd73ea4f81c5ac5a5098e222750a337a82": "5b3f30a1e48799d563fdceec337c31c49f395242b80742ef15f6799e47e83cb3",
+        "caafe5389ae585ef77387a962aee05b1bcf17029": "e9f0fbb367a32cbfc8f144b28c3f4ff6d0956003fbb1a0c09f3c487f4bf19311",
     }
+    revision = readiness._revision(root)
+    assert revision in expected_by_revision, revision
+    assert result["parser_sha256"] == expected_by_revision[revision]
